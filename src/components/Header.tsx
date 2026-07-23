@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Sparkles,
   Download,
@@ -11,7 +11,12 @@ import {
   Layers,
   Zap,
   Info,
-  FolderArchive
+  FolderArchive,
+  User,
+  Settings,
+  SlidersHorizontal,
+  LogOut,
+  ShieldCheck
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -48,28 +53,107 @@ export const Header: React.FC<HeaderProps> = ({
   onStartTour,
 }) => {
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close profile menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 sticky top-0 z-40 text-slate-100 shadow-md">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         
-        {/* Left Brand Identity */}
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-amber-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
-            <Sparkles className="w-5 h-5 text-white animate-pulse" />
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                Product Photo Studio
-              </h1>
-              <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                AI CleanUp
-              </span>
+        {/* Left Brand Identity & User Profile Dropdown */}
+        <div className="flex items-center space-x-3 sm:space-x-4">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-amber-500 flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <Sparkles className="w-5 h-5 text-white animate-pulse" />
             </div>
-            <p className="text-xs text-slate-400 hidden sm:block">
-              Remove backgrounds, clean blemishes & set backdrop with text prompts
-            </p>
+            <div>
+              <div className="flex items-center space-x-2">
+                <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                  Product Photo Studio
+                </h1>
+                <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                  AI CleanUp
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 hidden sm:block">
+                Remove backgrounds, clean blemishes & set backdrop with text prompts
+              </p>
+            </div>
+          </div>
+
+          {/* Vertical Divider */}
+          <div className="h-6 w-px bg-slate-800 hidden lg:block" />
+
+          {/* User Profile Dropdown Menu */}
+          <div className="relative" ref={profileMenuRef}>
+            <button
+              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              className="flex items-center space-x-2 bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl px-2.5 py-1.5 transition text-left focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+              title="User Account & Workspace Settings"
+            >
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                GM
+              </div>
+              <div className="hidden xl:block">
+                <p className="text-xs font-semibold text-slate-200 leading-none">Guuleed Maxamuud</p>
+                <p className="text-[10px] text-slate-400 leading-tight mt-0.5">Pro Member</p>
+              </div>
+              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {/* Profile Dropdown Popup */}
+            {profileMenuOpen && (
+              <div className="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl py-2 z-50 text-slate-200 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="px-3.5 py-2.5 border-b border-slate-800/80 bg-slate-950/40 rounded-t-2xl">
+                  <div className="flex items-center space-x-2">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    <div>
+                      <p className="text-xs font-bold text-white">Guuleed Maxamuud</p>
+                      <p className="text-[10px] text-slate-400 font-mono truncate">guuleedmaxamuud40@gmail.com</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="py-1">
+                  <button
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="w-full px-3.5 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 flex items-center space-x-2.5 transition text-left"
+                  >
+                    <Settings className="w-4 h-4 text-indigo-400" />
+                    <span>Account Settings</span>
+                  </button>
+
+                  <button
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="w-full px-3.5 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 flex items-center space-x-2.5 transition text-left"
+                  >
+                    <SlidersHorizontal className="w-4 h-4 text-purple-400" />
+                    <span>Workspace Preferences</span>
+                  </button>
+                </div>
+
+                <div className="border-t border-slate-800/80 pt-1 mt-1">
+                  <button
+                    onClick={() => setProfileMenuOpen(false)}
+                    className="w-full px-3.5 py-2 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 flex items-center space-x-2.5 transition text-left"
+                  >
+                    <LogOut className="w-4 h-4 text-rose-400" />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
