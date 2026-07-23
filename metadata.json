@@ -1,0 +1,6 @@
+{
+  "name": "Product Photo CleanUp Studio",
+  "description": "AI-powered product photo editor to remove backgrounds, clean up blemishes, replace backdrops, and enhance studio lighting with text prompts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
