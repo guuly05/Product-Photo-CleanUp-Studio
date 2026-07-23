@@ -7,7 +7,12 @@ import {
   Move,
   SplitSquareVertical,
   Check,
-  Eye
+  Eye,
+  Eraser,
+  Undo2,
+  Trash2,
+  X,
+  Sparkles,
 } from 'lucide-react';
 import { ImageAdjustments, BackgroundSettings, ShadowSettings } from '../types';
 
@@ -20,6 +25,7 @@ interface BeforeAfterSliderProps {
   shadow: ShadowSettings;
   isProcessing: boolean;
   activePrompt?: string;
+  onSmartEraserApply?: (newImageUrl: string, label: string) => void;
 }
 
 export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
@@ -31,12 +37,159 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
   shadow,
   isProcessing,
   activePrompt,
+  onSmartEraserApply,
 }) => {
   const [sliderPosition, setSliderPosition] = useState<number>(50); // percentage 0 to 100
   const [zoom, setZoom] = useState<number>(1);
   const [showGrid, setShowGrid] = useState<boolean>(false);
   const isDraggingRef = useRef<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Smart Eraser Tool State
+  const [isEraserActive, setIsEraserActive] = useState<boolean>(false);
+  const [eraserSize, setEraserSize] = useState<number>(30); // px
+  const [isDrawing, setIsDrawing] = useState<boolean>(false);
+  const [cursorPos, setCursorPos] = useState<{ x: number; y: number; visible: boolean }>({
+    x: 0,
+    y: 0,
+    visible: false,
+  });
+  const [strokeHistory, setStrokeHistory] = useState<ImageData[]>([]);
+  const [hasErased, setHasErased] = useState<boolean>(false);
+
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const loadedImageRef = useRef<HTMLImageElement | null>(null);
+
+  // Initialize or re-draw canvas when Eraser Mode toggles or currentUrl changes
+  useEffect(() => {
+    if (!isEraserActive || !currentUrl) return;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = currentUrl;
+    img.onload = () => {
+      loadedImageRef.current = img;
+      if (canvasRef.current) {
+        const canvas = canvasRef.current;
+        canvas.width = img.naturalWidth || 1200;
+        canvas.height = img.naturalHeight || 1200;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          const initialData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          setStrokeHistory([initialData]);
+          setHasErased(false);
+        }
+      }
+    };
+  }, [isEraserActive, currentUrl]);
+
+  // Canvas drawing coordinate calculations
+  const getCanvasCoords = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current) return { x: 0, y: 0, rectX: 0, rectY: 0, scaleFactor: 1 };
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    const rectX = clientX - rect.left;
+    const rectY = clientY - rect.top;
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: rectX * scaleX,
+      y: rectY * scaleY,
+      rectX,
+      rectY,
+      scaleFactor: scaleX,
+    };
+  };
+
+  const handleCanvasMouseDown = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Push current state to undo history
+    const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    setStrokeHistory((prev) => [...prev, currentData]);
+
+    const { x, y, scaleFactor } = getCanvasCoords(e);
+    setIsDrawing(true);
+    setHasErased(true);
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.beginPath();
+    ctx.arc(x, y, (eraserSize / 2) * scaleFactor, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const handleCanvasMouseMove = (e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>) => {
+    const { x, y, rectX, rectY, scaleFactor } = getCanvasCoords(e);
+    setCursorPos({ x: rectX, y: rectY, visible: true });
+
+    if (!isDrawing || !canvasRef.current) return;
+    const ctx = canvasRef.current.getContext('2d');
+    if (!ctx) return;
+
+    ctx.globalCompositeOperation = 'destination-out';
+    ctx.lineWidth = eraserSize * scaleFactor;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+  };
+
+  const handleCanvasMouseUp = () => {
+    if (!isDrawing || !canvasRef.current) return;
+    setIsDrawing(false);
+    const ctx = canvasRef.current.getContext('2d');
+    if (ctx) {
+      ctx.restore();
+      ctx.beginPath();
+    }
+  };
+
+  const handleUndoEraser = () => {
+    if (strokeHistory.length <= 1 || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const previousState = strokeHistory[strokeHistory.length - 2];
+    ctx.putImageData(previousState, 0, 0);
+    const updatedHistory = strokeHistory.slice(0, -1);
+    setStrokeHistory(updatedHistory);
+    if (updatedHistory.length <= 1) {
+      setHasErased(false);
+    }
+  };
+
+  const handleResetEraser = () => {
+    if (!canvasRef.current || !loadedImageRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(loadedImageRef.current, 0, 0, canvas.width, canvas.height);
+    const initialData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    setStrokeHistory([initialData]);
+    setHasErased(false);
+  };
+
+  const handleApplyEraser = () => {
+    if (!canvasRef.current || !onSmartEraserApply) return;
+    const dataUrl = canvasRef.current.toDataURL('image/png');
+    onSmartEraserApply(dataUrl, 'Smart Eraser Touch-Up');
+    setIsEraserActive(false);
+  };
 
   // Handle slider drag
   const handleMove = (clientX: number) => {
@@ -150,8 +303,44 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
           </div>
         )}
 
-        {/* View mode 1: Standard Current Image View */}
-        {!isComparing ? (
+        {/* View mode 1: Standard Current Image View or Smart Eraser Active View */}
+        {isEraserActive ? (
+          <div
+            className="relative flex items-center justify-center w-full h-full p-4 sm:p-8"
+            style={{ transform: `scale(${zoom})` }}
+          >
+            <div className="relative flex items-center justify-center max-w-full max-h-full">
+              <canvas
+                ref={canvasRef}
+                onMouseDown={handleCanvasMouseDown}
+                onMouseMove={handleCanvasMouseMove}
+                onMouseUp={handleCanvasMouseUp}
+                onMouseLeave={() => setCursorPos((prev) => ({ ...prev, visible: false }))}
+                onTouchStart={handleCanvasMouseDown}
+                onTouchMove={handleCanvasMouseMove}
+                onTouchEnd={handleCanvasMouseUp}
+                className="max-w-full max-h-full object-contain cursor-none shadow-2xl rounded-lg border border-slate-700/50"
+                style={{
+                  filter: `${filterStyle} ${shadowFilter}`,
+                  touchAction: 'none',
+                }}
+              />
+
+              {/* Custom Brush Cursor Ring */}
+              {cursorPos.visible && (
+                <div
+                  className="pointer-events-none absolute z-50 rounded-full border-2 border-white shadow-[0_0_10px_rgba(0,0,0,0.9)] bg-rose-500/20 -translate-x-1/2 -translate-y-1/2"
+                  style={{
+                    left: `${cursorPos.x}px`,
+                    top: `${cursorPos.y}px`,
+                    width: `${eraserSize}px`,
+                    height: `${eraserSize}px`,
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        ) : !isComparing ? (
           <div
             className="transition-transform duration-200 ease-out flex items-center justify-center w-full h-full p-4 sm:p-8"
             style={{ transform: `scale(${zoom})` }}
@@ -268,7 +457,19 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
           )}
         </div>
 
+        {/* Smart Eraser Tool Toggle */}
         <div className="w-px h-4 bg-slate-800 my-auto mx-1" />
+
+        <button
+          onClick={() => setIsEraserActive(!isEraserActive)}
+          className={`p-1.5 rounded-lg transition flex items-center space-x-1.5 ${
+            isEraserActive ? 'bg-rose-600 text-white shadow-lg' : 'hover:bg-slate-800 text-slate-400 hover:text-white'
+          }`}
+          title="Smart Eraser: Manually brush over unwanted artifacts to erase them"
+        >
+          <Eraser className="w-4 h-4 text-rose-400" />
+          <span className="text-xs font-semibold hidden sm:inline">Smart Eraser</span>
+        </button>
 
         {/* Alignment Grid Overlay Toggle */}
         <button
@@ -284,8 +485,73 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
 
       </div>
 
+      {/* Floating Smart Eraser Control Bar */}
+      {isEraserActive && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex flex-wrap items-center gap-2 bg-slate-900/95 backdrop-blur-md px-4 py-2 rounded-2xl border border-rose-500/40 text-slate-200 shadow-2xl">
+          <div className="flex items-center space-x-1.5 border-r border-slate-800 pr-3">
+            <Eraser className="w-4 h-4 text-rose-400 animate-pulse" />
+            <span className="text-xs font-bold text-white uppercase tracking-wider">Smart Eraser</span>
+          </div>
+
+          {/* Brush Size Slider */}
+          <div className="flex items-center space-x-2 border-r border-slate-800 pr-3">
+            <span className="text-[11px] text-slate-400 font-medium">Brush Size:</span>
+            <input
+              type="range"
+              min="5"
+              max="100"
+              value={eraserSize}
+              onChange={(e) => setEraserSize(Number(e.target.value))}
+              className="w-20 accent-rose-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+            />
+            <span className="text-[11px] font-mono text-rose-300 w-8 font-bold">{eraserSize}px</span>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center space-x-1.5">
+            <button
+              onClick={handleUndoEraser}
+              disabled={strokeHistory.length <= 1}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 transition"
+              title="Undo Brush Stroke"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+            </button>
+
+            <button
+              onClick={handleResetEraser}
+              disabled={!hasErased}
+              className="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 disabled:opacity-40 transition"
+              title="Clear All Eraser Strokes"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+
+            {onSmartEraserApply && (
+              <button
+                onClick={handleApplyEraser}
+                disabled={!hasErased}
+                className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center space-x-1 disabled:opacity-40"
+                title="Apply erased changes as a new photo step"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Apply Touch-Up</span>
+              </button>
+            )}
+
+            <button
+              onClick={() => setIsEraserActive(false)}
+              className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition"
+              title="Close Eraser"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Compare Hint Badge */}
-      {isComparing && (
+      {isComparing && !isEraserActive && (
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 bg-slate-900/90 backdrop-blur border border-indigo-500/40 text-indigo-300 px-3 py-1 rounded-full text-xs font-semibold flex items-center space-x-2 shadow-lg">
           <SplitSquareVertical className="w-3.5 h-3.5" />
           <span>Drag split line to compare original vs cleaned photo</span>

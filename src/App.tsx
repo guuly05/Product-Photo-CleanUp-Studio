@@ -256,6 +256,25 @@ export default function App() {
     }
   };
 
+  // Smart Eraser Apply Handler
+  const handleSmartEraserApply = (newImageUrl: string, label: string) => {
+    const newStep: EditHistoryItem = {
+      id: `eraser-${Date.now()}`,
+      timestamp: Date.now(),
+      imageUrl: newImageUrl,
+      prompt: 'Smart Eraser artifact removal touch-up',
+      label: label || 'Smart Eraser Touch-Up',
+      type: 'ai_edit',
+      adjustments: { ...adjustments },
+      background: { ...background },
+      shadow: { ...shadow },
+    };
+
+    const newHistory = [...history.slice(0, historyIndex + 1), newStep];
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
   // Export all history items as ZIP
   const handleExportAllZip = async () => {
     setIsExportingZip(true);
@@ -494,6 +513,7 @@ export default function App() {
               shadow={shadow}
               isProcessing={isProcessing}
               activePrompt={activePromptText}
+              onSmartEraserApply={handleSmartEraserApply}
             />
 
             {/* History Steps Bar under Canvas */}
