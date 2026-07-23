@@ -1,11 +1,12 @@
 import JSZip from 'jszip';
-import { EditHistoryItem, ImageAdjustments, BackgroundSettings, ShadowSettings } from '../types';
+import { EditHistoryItem, ImageAdjustments, BackgroundSettings, ShadowSettings, WatermarkSettings } from '../types';
 
 export async function renderPhotoToBlob(
   imageUrl: string,
   adjustments: ImageAdjustments,
   background: BackgroundSettings,
   shadow: ShadowSettings,
+  watermark?: WatermarkSettings,
   format: 'png' | 'jpeg' = 'png',
   transparentBackground: boolean = false
 ): Promise<Blob> {
@@ -64,7 +65,55 @@ export async function renderPhotoToBlob(
       // 3. Draw Main Image
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-      // 4. Export Blob
+      // 4. Draw Watermark if enabled
+      if (watermark?.enabled && watermark.text?.trim()) {
+        ctx.save();
+        ctx.filter = 'none'; // reset filter so watermark is drawn crisp
+        
+        const scaleFactor = (watermark.scale || 100) / 100;
+        const fontSize = Math.max(16, Math.round(canvas.width * 0.035 * scaleFactor));
+        
+        ctx.font = `bold ${fontSize}px sans-serif`;
+        ctx.globalAlpha = Math.max(0.05, Math.min(1, (watermark.opacity || 60) / 100));
+        ctx.fillStyle = watermark.color || '#FFFFFF';
+
+        // Add soft text shadow for high contrast legibility
+        ctx.shadowColor = watermark.color?.toLowerCase() === '#ffffff' ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.8)';
+        ctx.shadowBlur = 6;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+
+        const textMetrics = ctx.measureText(watermark.text);
+        const textWidth = textMetrics.width;
+        const margin = Math.round(canvas.width * 0.04);
+
+        let x = margin;
+        let y = margin + fontSize;
+
+        const pos = watermark.position || 'bottom-right';
+
+        if (pos === 'top-left') {
+          x = margin;
+          y = margin + fontSize;
+        } else if (pos === 'top-right') {
+          x = canvas.width - margin - textWidth;
+          y = margin + fontSize;
+        } else if (pos === 'bottom-left') {
+          x = margin;
+          y = canvas.height - margin;
+        } else if (pos === 'bottom-right') {
+          x = canvas.width - margin - textWidth;
+          y = canvas.height - margin;
+        } else if (pos === 'center') {
+          x = (canvas.width - textWidth) / 2;
+          y = canvas.height / 2 + fontSize / 3;
+        }
+
+        ctx.fillText(watermark.text, x, y);
+        ctx.restore();
+      }
+
+      // 5. Export Blob
       const mimeType = format === 'jpeg' ? 'image/jpeg' : 'image/png';
       canvas.toBlob((blob) => {
         if (blob) {
@@ -84,10 +133,11 @@ export async function exportEditedPhoto(
   adjustments: ImageAdjustments,
   background: BackgroundSettings,
   shadow: ShadowSettings,
+  watermark?: WatermarkSettings,
   format: 'png' | 'jpeg' = 'png',
   transparentBackground: boolean = false
 ): Promise<void> {
-  const blob = await renderPhotoToBlob(imageUrl, adjustments, background, shadow, format, transparentBackground);
+  const blob = await renderPhotoToBlob(imageUrl, adjustments, background, shadow, watermark, format, transparentBackground);
   const dataUrl = URL.createObjectURL(blob);
 
   const a = document.createElement('a');
@@ -103,7 +153,8 @@ export async function exportAllHistoryAsZip(
   history: EditHistoryItem[],
   currentAdjustments: ImageAdjustments,
   currentBackground: BackgroundSettings,
-  currentShadow: ShadowSettings
+  currentShadow: ShadowSettings,
+  currentWatermark?: WatermarkSettings
 ): Promise<void> {
   const zip = new JSZip();
 
@@ -112,6 +163,7 @@ export async function exportAllHistoryAsZip(
     const itemAdj = item.adjustments || currentAdjustments;
     const itemBg = item.background || currentBackground;
     const itemShadow = item.shadow || currentShadow;
+    const itemWatermark = item.watermark || currentWatermark;
 
     try {
       const blob = await renderPhotoToBlob(
@@ -119,6 +171,7 @@ export async function exportAllHistoryAsZip(
         itemAdj,
         itemBg,
         itemShadow,
+        itemWatermark,
         'png',
         false
       );

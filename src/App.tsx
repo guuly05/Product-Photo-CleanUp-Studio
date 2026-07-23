@@ -14,6 +14,7 @@ import {
   ImageAdjustments,
   BackgroundSettings,
   ShadowSettings,
+  WatermarkSettings,
   SampleProduct,
   LightingAnalysisResult
 } from './types';
@@ -39,6 +40,15 @@ const INITIAL_SHADOW: ShadowSettings = {
   blur: 15,
   offsetY: 12,
   color: '#000000',
+};
+
+const INITIAL_WATERMARK: WatermarkSettings = {
+  enabled: false,
+  text: 'BRAND LOGO',
+  position: 'bottom-right',
+  opacity: 60,
+  scale: 100,
+  color: '#FFFFFF',
 };
 
 export default function App() {
@@ -90,16 +100,18 @@ export default function App() {
   const [adjustments, setAdjustments] = useState<ImageAdjustments>(INITIAL_ADJUSTMENTS);
   const [background, setBackground] = useState<BackgroundSettings>(INITIAL_BG);
   const [shadow, setShadow] = useState<ShadowSettings>(INITIAL_SHADOW);
+  const [watermark, setWatermark] = useState<WatermarkSettings>(INITIAL_WATERMARK);
 
   // Tool Undo / Redo Stack State
   interface ToolSnapshot {
     adjustments: ImageAdjustments;
     background: BackgroundSettings;
     shadow: ShadowSettings;
+    watermark: WatermarkSettings;
   }
 
   const [toolHistory, setToolHistory] = useState<ToolSnapshot[]>([
-    { adjustments: INITIAL_ADJUSTMENTS, background: INITIAL_BG, shadow: INITIAL_SHADOW }
+    { adjustments: INITIAL_ADJUSTMENTS, background: INITIAL_BG, shadow: INITIAL_SHADOW, watermark: INITIAL_WATERMARK }
   ]);
   const [toolPointer, setToolPointer] = useState<number>(0);
   const isUndoRedoRef = useRef<boolean>(false);
@@ -117,7 +129,8 @@ export default function App() {
       currentSnapshot &&
       JSON.stringify(currentSnapshot.adjustments) === JSON.stringify(adjustments) &&
       JSON.stringify(currentSnapshot.background) === JSON.stringify(background) &&
-      JSON.stringify(currentSnapshot.shadow) === JSON.stringify(shadow)
+      JSON.stringify(currentSnapshot.shadow) === JSON.stringify(shadow) &&
+      JSON.stringify(currentSnapshot.watermark) === JSON.stringify(watermark)
     ) {
       return;
     }
@@ -126,6 +139,7 @@ export default function App() {
       adjustments,
       background,
       shadow,
+      watermark,
     };
 
     const now = Date.now();
@@ -149,7 +163,7 @@ export default function App() {
       });
       setToolPointer(prev => prev + 1);
     }
-  }, [adjustments, background, shadow]);
+  }, [adjustments, background, shadow, watermark]);
 
   // Undo / Redo Tool Actions
   const canUndoTool = toolPointer > 0;
@@ -165,6 +179,7 @@ export default function App() {
       setAdjustments(targetSnapshot.adjustments);
       setBackground(targetSnapshot.background);
       setShadow(targetSnapshot.shadow);
+      setWatermark(targetSnapshot.watermark || INITIAL_WATERMARK);
     }
   };
 
@@ -178,6 +193,7 @@ export default function App() {
       setAdjustments(targetSnapshot.adjustments);
       setBackground(targetSnapshot.background);
       setShadow(targetSnapshot.shadow);
+      setWatermark(targetSnapshot.watermark || INITIAL_WATERMARK);
     }
   };
 
@@ -228,7 +244,8 @@ export default function App() {
       if (
         currentItem.adjustments === adjustments &&
         currentItem.background === background &&
-        currentItem.shadow === shadow
+        currentItem.shadow === shadow &&
+        currentItem.watermark === watermark
       ) {
         return prev;
       }
@@ -238,10 +255,11 @@ export default function App() {
         adjustments,
         background,
         shadow,
+        watermark,
       };
       return updated;
     });
-  }, [adjustments, background, shadow, historyIndex]);
+  }, [adjustments, background, shadow, watermark, historyIndex]);
 
   // Handle switching active history step and restoring its saved settings
   const handleSelectHistoryItem = (index: number) => {
@@ -251,11 +269,13 @@ export default function App() {
       const adj = item.adjustments || INITIAL_ADJUSTMENTS;
       const bg = item.background || INITIAL_BG;
       const shd = item.shadow || INITIAL_SHADOW;
+      const wtm = item.watermark || INITIAL_WATERMARK;
       isUndoRedoRef.current = true;
       setAdjustments(adj);
       setBackground(bg);
       setShadow(shd);
-      setToolHistory([{ adjustments: adj, background: bg, shadow: shd }]);
+      setWatermark(wtm);
+      setToolHistory([{ adjustments: adj, background: bg, shadow: shd, watermark: wtm }]);
       setToolPointer(0);
     }
   };
@@ -272,6 +292,7 @@ export default function App() {
       adjustments: { ...adjustments },
       background: { ...background },
       shadow: { ...shadow },
+      watermark: { ...watermark },
     };
 
     const newHistory = [...history.slice(0, historyIndex + 1), newStep];
@@ -284,7 +305,7 @@ export default function App() {
     setIsExportingZip(true);
     setErrorMessage(null);
     try {
-      await exportAllHistoryAsZip(history, adjustments, background, shadow);
+      await exportAllHistoryAsZip(history, adjustments, background, shadow, watermark);
     } catch (err: any) {
       console.error('Export ZIP failed:', err);
       setErrorMessage(err.message || 'Failed to generate history ZIP package.');
@@ -422,6 +443,7 @@ export default function App() {
         setAdjustments(INITIAL_ADJUSTMENTS);
         setBackground(INITIAL_BG);
         setShadow(INITIAL_SHADOW);
+        setWatermark(INITIAL_WATERMARK);
       }
     };
     reader.readAsDataURL(file);
@@ -444,6 +466,7 @@ export default function App() {
     setAdjustments(INITIAL_ADJUSTMENTS);
     setBackground(INITIAL_BG);
     setShadow(INITIAL_SHADOW);
+    setWatermark(INITIAL_WATERMARK);
   };
 
   // Reset to original upload
@@ -453,6 +476,7 @@ export default function App() {
     setAdjustments(INITIAL_ADJUSTMENTS);
     setBackground(INITIAL_BG);
     setShadow(INITIAL_SHADOW);
+    setWatermark(INITIAL_WATERMARK);
     setErrorMessage(null);
   };
 
@@ -461,6 +485,7 @@ export default function App() {
     setAdjustments(INITIAL_ADJUSTMENTS);
     setBackground(INITIAL_BG);
     setShadow(INITIAL_SHADOW);
+    setWatermark(INITIAL_WATERMARK);
   };
 
   // Download HQ Image
@@ -471,6 +496,7 @@ export default function App() {
         adjustments,
         background,
         shadow,
+        watermark,
         format,
         transparent
       );
@@ -516,6 +542,7 @@ export default function App() {
               adjustments={adjustments}
               background={background}
               shadow={shadow}
+              watermark={watermark}
               isProcessing={isProcessing}
               activePrompt={activePromptText}
               onSmartEraserApply={handleSmartEraserApply}
@@ -542,6 +569,8 @@ export default function App() {
                 onChangeBackground={setBackground}
                 shadow={shadow}
                 onChangeShadow={setShadow}
+                watermark={watermark}
+                onChangeWatermark={setWatermark}
                 onResetTools={handleResetTools}
                 onAnalyzeLighting={handleAnalyzeLighting}
                 isAnalyzingLighting={isAnalyzingLighting}

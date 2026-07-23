@@ -8,6 +8,18 @@ export interface EditHistoryItem {
   adjustments?: ImageAdjustments;
   background?: BackgroundSettings;
   shadow?: ShadowSettings;
+  watermark?: WatermarkSettings;
+}
+
+export type WatermarkPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'center';
+
+export interface WatermarkSettings {
+  enabled: boolean;
+  text: string;
+  position: WatermarkPosition;
+  opacity: number; // 10 to 100
+  scale: number;   // 50 to 200
+  color: string;   // hex string e.g. '#FFFFFF'
 }
 
 export interface ImageAdjustments {

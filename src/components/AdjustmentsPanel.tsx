@@ -14,9 +14,13 @@ import {
   Box,
   Lightbulb,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Stamp,
+  Type,
+  Grid,
+  Maximize2
 } from 'lucide-react';
-import { ImageAdjustments, BackgroundSettings, ShadowSettings, LightingAnalysisResult } from '../types';
+import { ImageAdjustments, BackgroundSettings, ShadowSettings, WatermarkSettings, WatermarkPosition, LightingAnalysisResult } from '../types';
 
 interface AdjustmentsPanelProps {
   adjustments: ImageAdjustments;
@@ -25,6 +29,8 @@ interface AdjustmentsPanelProps {
   onChangeBackground: (bg: BackgroundSettings) => void;
   shadow: ShadowSettings;
   onChangeShadow: (shadow: ShadowSettings) => void;
+  watermark: WatermarkSettings;
+  onChangeWatermark: (watermark: WatermarkSettings) => void;
   onResetTools: () => void;
   onAnalyzeLighting: () => void;
   isAnalyzingLighting: boolean;
@@ -43,6 +49,8 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
   onChangeBackground,
   shadow,
   onChangeShadow,
+  watermark,
+  onChangeWatermark,
   onResetTools,
   onAnalyzeLighting,
   isAnalyzingLighting,
@@ -67,6 +75,22 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
       [key]: value,
     });
   };
+
+  const handleWatermarkChange = (key: keyof WatermarkSettings, value: any) => {
+    onChangeWatermark({
+      ...watermark,
+      [key]: value,
+    });
+  };
+
+  const watermarkPresets = ['CLEANSNAP AI', 'OFFICIAL BRAND', 'CONFIDENTIAL', 'SAMPLE ONLY'];
+  const watermarkPositions: { id: WatermarkPosition; label: string }[] = [
+    { id: 'top-left', label: 'Top Left' },
+    { id: 'top-right', label: 'Top Right' },
+    { id: 'center', label: 'Center' },
+    { id: 'bottom-left', label: 'Bottom Left' },
+    { id: 'bottom-right', label: 'Bottom Right' },
+  ];
 
   return (
     <div id="tour-adjustments-panel" className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-5 text-slate-200">
@@ -419,6 +443,190 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
           />
         </div>
 
+      </div>
+
+      {/* Watermark Branding Section */}
+      <div className="space-y-3 pt-3 border-t border-slate-800">
+        <div className="flex items-center justify-between">
+          <label className="text-xs font-bold text-slate-300 flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={watermark.enabled}
+              onChange={(e) => handleWatermarkChange('enabled', e.target.checked)}
+              className="rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500"
+            />
+            <Stamp className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Watermark & Branding Overlay</span>
+          </label>
+          <span className="text-[10px] font-mono text-slate-500 uppercase">
+            {watermark.enabled ? 'Active' : 'Off'}
+          </span>
+        </div>
+
+        {watermark.enabled && (
+          <div className="space-y-3 pl-2 bg-slate-950/60 p-3.5 rounded-xl border border-slate-800">
+            
+            {/* Custom Text Input */}
+            <div>
+              <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1">
+                <span className="flex items-center space-x-1">
+                  <Type className="w-3 h-3 text-indigo-400" />
+                  <span>Watermark Text / Brand</span>
+                </span>
+              </div>
+              <input
+                type="text"
+                value={watermark.text}
+                onChange={(e) => handleWatermarkChange('text', e.target.value)}
+                placeholder="Enter brand name..."
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+              />
+              {/* Quick Text Presets */}
+              <div className="flex flex-wrap gap-1 mt-1.5">
+                {watermarkPresets.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => handleWatermarkChange('text', preset)}
+                    className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded border border-slate-700 transition"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Position Picker Grid */}
+            <div>
+              <div className="flex justify-between text-[11px] text-slate-400 mb-1.5">
+                <span className="flex items-center space-x-1">
+                  <Grid className="w-3 h-3 text-indigo-400" />
+                  <span>Position</span>
+                </span>
+                <span className="font-mono text-[10px] text-indigo-300 capitalize">
+                  {watermark.position.replace('-', ' ')}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-1.5 bg-slate-900 p-2 rounded-lg border border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => handleWatermarkChange('position', 'top-left')}
+                  className={`py-1 px-2 text-[10px] font-medium rounded transition text-center ${
+                    watermark.position === 'top-left' ? 'bg-indigo-600 text-white font-bold shadow' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  Top Left
+                </button>
+                <div className="flex items-center justify-center text-[10px] text-slate-600">--</div>
+                <button
+                  type="button"
+                  onClick={() => handleWatermarkChange('position', 'top-right')}
+                  className={`py-1 px-2 text-[10px] font-medium rounded transition text-center ${
+                    watermark.position === 'top-right' ? 'bg-indigo-600 text-white font-bold shadow' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  Top Right
+                </button>
+
+                <div className="col-span-3 flex justify-center my-0.5">
+                  <button
+                    type="button"
+                    onClick={() => handleWatermarkChange('position', 'center')}
+                    className={`py-1 px-4 text-[10px] font-medium rounded transition text-center ${
+                      watermark.position === 'center' ? 'bg-indigo-600 text-white font-bold shadow' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                    }`}
+                  >
+                    Center
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleWatermarkChange('position', 'bottom-left')}
+                  className={`py-1 px-2 text-[10px] font-medium rounded transition text-center ${
+                    watermark.position === 'bottom-left' ? 'bg-indigo-600 text-white font-bold shadow' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  Bottom Left
+                </button>
+                <div className="flex items-center justify-center text-[10px] text-slate-600">--</div>
+                <button
+                  type="button"
+                  onClick={() => handleWatermarkChange('position', 'bottom-right')}
+                  className={`py-1 px-2 text-[10px] font-medium rounded transition text-center ${
+                    watermark.position === 'bottom-right' ? 'bg-indigo-600 text-white font-bold shadow' : 'bg-slate-800 text-slate-400 hover:bg-slate-700'
+                  }`}
+                >
+                  Bottom Right
+                </button>
+              </div>
+            </div>
+
+            {/* Opacity Slider */}
+            <div>
+              <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>Opacity</span>
+                <span className="font-mono">{watermark.opacity}%</span>
+              </div>
+              <input
+                type="range"
+                min={10}
+                max={100}
+                value={watermark.opacity}
+                onChange={(e) => handleWatermarkChange('opacity', Number(e.target.value))}
+                className="w-full accent-indigo-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+              />
+            </div>
+
+            {/* Scale Slider */}
+            <div>
+              <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span className="flex items-center space-x-1">
+                  <Maximize2 className="w-3 h-3 text-indigo-400" />
+                  <span>Size Scale</span>
+                </span>
+                <span className="font-mono">{watermark.scale}%</span>
+              </div>
+              <input
+                type="range"
+                min={50}
+                max={200}
+                value={watermark.scale}
+                onChange={(e) => handleWatermarkChange('scale', Number(e.target.value))}
+                className="w-full accent-indigo-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+              />
+            </div>
+
+            {/* Watermark Text Color Swatches */}
+            <div>
+              <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+                <span>Color</span>
+                <span className="font-mono uppercase">{watermark.color}</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                {[
+                  { color: '#FFFFFF', name: 'White' },
+                  { color: '#000000', name: 'Black' },
+                  { color: '#F59E0B', name: 'Gold' },
+                  { color: '#6366F1', name: 'Indigo' },
+                  { color: '#94A3B8', name: 'Slate' },
+                ].map((c) => (
+                  <button
+                    key={c.color}
+                    type="button"
+                    onClick={() => handleWatermarkChange('color', c.color)}
+                    className={`w-6 h-6 rounded-full border-2 transition ${
+                      watermark.color?.toLowerCase() === c.color.toLowerCase() ? 'border-indigo-500 ring-2 ring-indigo-500/50 scale-110' : 'border-slate-700'
+                    }`}
+                    style={{ backgroundColor: c.color }}
+                    title={c.name}
+                  />
+                ))}
+              </div>
+            </div>
+
+          </div>
+        )}
       </div>
 
     </div>

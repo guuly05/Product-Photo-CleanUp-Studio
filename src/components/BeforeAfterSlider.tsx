@@ -15,7 +15,7 @@ import {
   Sparkles,
   FileText,
 } from 'lucide-react';
-import { ImageAdjustments, BackgroundSettings, ShadowSettings } from '../types';
+import { ImageAdjustments, BackgroundSettings, ShadowSettings, WatermarkSettings } from '../types';
 
 interface BeforeAfterSliderProps {
   originalUrl: string;
@@ -24,6 +24,7 @@ interface BeforeAfterSliderProps {
   adjustments: ImageAdjustments;
   background: BackgroundSettings;
   shadow: ShadowSettings;
+  watermark?: WatermarkSettings;
   isProcessing: boolean;
   activePrompt?: string;
   onSmartEraserApply?: (newImageUrl: string, label: string) => void;
@@ -37,6 +38,7 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
   adjustments,
   background,
   shadow,
+  watermark,
   isProcessing,
   activePrompt,
   onSmartEraserApply,
@@ -289,7 +291,34 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
         className="relative w-full h-full overflow-hidden flex items-center justify-center cursor-crosshair"
         style={getBgStyle()}
       >
-        
+        {/* Live Watermark Overlay */}
+        {watermark?.enabled && watermark.text?.trim() && !isEraserActive && (
+          <div
+            className={`absolute pointer-events-none z-20 font-bold uppercase tracking-widest whitespace-nowrap select-none transition-all duration-150 ${
+              watermark.position === 'top-left'
+                ? 'top-8 left-8'
+                : watermark.position === 'top-right'
+                ? 'top-8 right-8'
+                : watermark.position === 'bottom-left'
+                ? 'bottom-8 left-8'
+                : watermark.position === 'bottom-right'
+                ? 'bottom-8 right-8'
+                : 'top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2'
+            }`}
+            style={{
+              opacity: (watermark.opacity || 60) / 100,
+              fontSize: `${Math.round(14 * ((watermark.scale || 100) / 100))}px`,
+              color: watermark.color || '#FFFFFF',
+              textShadow:
+                watermark.color?.toLowerCase() === '#ffffff'
+                  ? '0 1px 4px rgba(0,0,0,0.8), 0 0 2px rgba(0,0,0,0.9)'
+                  : '0 1px 4px rgba(255,255,255,0.8), 0 0 2px rgba(255,255,255,0.9)',
+            }}
+          >
+            {watermark.text}
+          </div>
+        )}
+
         {/* Loading Overlay when processing AI Prompt */}
         {isProcessing && (
           <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-md z-30 flex flex-col items-center justify-center p-6 text-center">
