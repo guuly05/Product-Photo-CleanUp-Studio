@@ -48,7 +48,7 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-6 text-slate-200">
+    <div id="tour-adjustments-panel" className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-6 text-slate-200">
       
       {/* Title & Reset */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-800">

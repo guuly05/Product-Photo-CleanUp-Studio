@@ -5,6 +5,7 @@ import { InstructionConsole } from './components/InstructionConsole';
 import { AdjustmentsPanel } from './components/AdjustmentsPanel';
 import { HistoryTimeline } from './components/HistoryTimeline';
 import { SamplePickerModal } from './components/SamplePickerModal';
+import { GuidedTour } from './components/GuidedTour';
 import { SAMPLE_PRODUCTS } from './data/samples';
 import {
   EditHistoryItem,
@@ -60,7 +61,25 @@ export default function App() {
   const [isComparing, setIsComparing] = useState<boolean>(false);
   const [showAdjustments, setShowAdjustments] = useState<boolean>(true);
   const [isSampleModalOpen, setIsSampleModalOpen] = useState<boolean>(false);
+  const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Auto-trigger tour on first visit
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('hasSeenPhotoStudioTour');
+    if (!hasSeenTour) {
+      // Delay slightly so layout renders cleanly
+      const timer = setTimeout(() => {
+        setIsTourOpen(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, []);
+
+  const handleCloseTour = () => {
+    setIsTourOpen(false);
+    localStorage.setItem('hasSeenPhotoStudioTour', 'true');
+  };
 
   // Client tools state
   const [adjustments, setAdjustments] = useState<ImageAdjustments>(INITIAL_ADJUSTMENTS);
@@ -213,6 +232,7 @@ export default function App() {
         onSelectModel={setSelectedModel}
         hasEditedImage={history.length > 1}
         historyCount={history.length}
+        onStartTour={() => setIsTourOpen(true)}
       />
 
       {/* Main Workspace Layout */}
@@ -291,6 +311,12 @@ export default function App() {
         isOpen={isSampleModalOpen}
         onClose={() => setIsSampleModalOpen(false)}
         onSelectSample={handleSelectSample}
+      />
+
+      {/* Guided Tour Overlay */}
+      <GuidedTour
+        isOpen={isTourOpen}
+        onClose={handleCloseTour}
       />
 
     </div>

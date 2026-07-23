@@ -25,6 +25,7 @@ interface HeaderProps {
   onSelectModel: (model: string) => void;
   hasEditedImage: boolean;
   historyCount: number;
+  onStartTour: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -39,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   onSelectModel,
   hasEditedImage,
   historyCount,
+  onStartTour,
 }) => {
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
 
@@ -98,6 +100,17 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Right Action Tools */}
         <div className="flex items-center space-x-2">
           
+          {/* Guided Tour Start Button */}
+          <button
+            onClick={onStartTour}
+            id="tour-start-button"
+            className="px-2.5 py-1.5 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-medium border border-indigo-500/30 transition flex items-center space-x-1.5"
+            title="Quick guided tour of feature tools"
+          >
+            <Info className="w-4 h-4 text-indigo-400" />
+            <span className="hidden sm:inline">Tour</span>
+          </button>
+
           {/* Sample Product Photos */}
           <button
             onClick={onOpenSamples}
@@ -150,7 +163,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Download Dropdown */}
-          <div className="relative">
+          <div className="relative" id="tour-export-button">
             <button
               onClick={() => setDownloadMenuOpen(!downloadMenuOpen)}
               className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition flex items-center space-x-1.5"

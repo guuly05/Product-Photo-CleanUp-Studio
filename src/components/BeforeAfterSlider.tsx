@@ -112,7 +112,7 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
     : 'none';
 
   return (
-    <div className="relative w-full h-[450px] sm:h-[550px] lg:h-[620px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800/80 shadow-2xl flex items-center justify-center select-none group">
+    <div id="tour-canvas-area" className="relative w-full h-[450px] sm:h-[550px] lg:h-[620px] bg-slate-950 rounded-2xl overflow-hidden border border-slate-800/80 shadow-2xl flex items-center justify-center select-none group">
       
       {/* Grid Overlay Guide */}
       {showGrid && (

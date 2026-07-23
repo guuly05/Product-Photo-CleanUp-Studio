@@ -64,7 +64,7 @@ export const InstructionConsole: React.FC<InstructionConsoleProps> = ({
   };
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-5">
+    <div id="tour-instruction-console" className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-5">
       
       {/* Top Header & Instruction Input */}
       <div>
