@@ -34,6 +34,108 @@ async function startServer() {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
+  // AI Lighting Analysis endpoint
+  app.post("/api/analyze-lighting", async (req, res) => {
+    try {
+      const { image, mimeType = "image/png" } = req.body;
+
+      if (!image) {
+        return res.status(400).json({ error: "Image data is required." });
+      }
+
+      let cleanBase64 = image;
+      let detectedMime = mimeType;
+
+      if (image.includes(";base64,")) {
+        const parts = image.split(";base64,");
+        detectedMime = parts[0].replace("data:", "") || mimeType;
+        cleanBase64 = parts[1];
+      }
+
+      const ai = getGeminiClient();
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                data: cleanBase64,
+                mimeType: detectedMime,
+              },
+            },
+            {
+              text: `Analyze this product photo as a commercial studio photography lighting engineer.
+Examine exposure, brightness, contrast, color saturation, grounding shadows, reflections, and backdrop framing.
+Return optimal studio lighting post-processing settings and recommendations for commercial e-commerce.
+
+Return JSON with:
+- brightness: integer from -50 to 50
+- contrast: integer from -50 to 50
+- saturation: integer from -50 to 50
+- shadow: { enabled: boolean, opacity: integer 0-100, blur: integer 0-50, offsetY: integer 0-40 }
+- suggestedBackdropColor: hex string (e.g., "#FFFFFF", "#F1F5F9", or "#F5F2EB")
+- lightingAssessment: 1-2 sentence professional assessment of current lighting and exposure
+- recommendedPrompt: tailored retouching prompt for this image`,
+            },
+          ],
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              brightness: { type: "INTEGER" },
+              contrast: { type: "INTEGER" },
+              saturation: { type: "INTEGER" },
+              shadow: {
+                type: "OBJECT",
+                properties: {
+                  enabled: { type: "BOOLEAN" },
+                  opacity: { type: "INTEGER" },
+                  blur: { type: "INTEGER" },
+                  offsetY: { type: "INTEGER" },
+                },
+                required: ["enabled", "opacity", "blur", "offsetY"],
+              },
+              suggestedBackdropColor: { type: "STRING" },
+              lightingAssessment: { type: "STRING" },
+              recommendedPrompt: { type: "STRING" },
+            },
+            required: [
+              "brightness",
+              "contrast",
+              "saturation",
+              "shadow",
+              "suggestedBackdropColor",
+              "lightingAssessment",
+              "recommendedPrompt",
+            ],
+          },
+        },
+      });
+
+      let analysis = null;
+      if (response.text) {
+        analysis = JSON.parse(response.text);
+      }
+
+      if (!analysis) {
+        throw new Error("Model returned empty analysis.");
+      }
+
+      res.json({
+        success: true,
+        analysis,
+      });
+    } catch (error: any) {
+      console.error("Error in /api/analyze-lighting:", error);
+      res.status(500).json({
+        error: error.message || "Failed to analyze photo lighting.",
+      });
+    }
+  });
+
   // Photo editing endpoint using Gemini
   app.post("/api/edit-photo", async (req, res) => {
     try {

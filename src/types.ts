@@ -47,3 +47,18 @@ export interface PresetInstruction {
   prompt: string;
   category: 'background' | 'cleanup' | 'ecommerce' | 'aesthetic';
 }
+
+export interface LightingAnalysisResult {
+  brightness: number; // -50 to 50
+  contrast: number;   // -50 to 50
+  saturation: number; // -50 to 50
+  shadow: {
+    enabled: boolean;
+    opacity: number;  // 0 to 100
+    blur: number;     // 0 to 50
+    offsetY: number;  // 0 to 40
+  };
+  suggestedBackdropColor: string;
+  lightingAssessment: string;
+  recommendedPrompt: string;
+}

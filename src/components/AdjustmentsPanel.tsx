@@ -9,9 +9,12 @@ import {
   RotateCcw,
   Sparkles,
   Maximize,
-  Box
+  Box,
+  Lightbulb,
+  CheckCircle2,
+  ArrowRight
 } from 'lucide-react';
-import { ImageAdjustments, BackgroundSettings, ShadowSettings } from '../types';
+import { ImageAdjustments, BackgroundSettings, ShadowSettings, LightingAnalysisResult } from '../types';
 
 interface AdjustmentsPanelProps {
   adjustments: ImageAdjustments;
@@ -21,6 +24,10 @@ interface AdjustmentsPanelProps {
   shadow: ShadowSettings;
   onChangeShadow: (shadow: ShadowSettings) => void;
   onResetTools: () => void;
+  onAnalyzeLighting: () => void;
+  isAnalyzingLighting: boolean;
+  lastLightingAnalysis: LightingAnalysisResult | null;
+  onApplyRecommendedPrompt: (prompt: string) => void;
 }
 
 export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
@@ -31,6 +38,10 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
   shadow,
   onChangeShadow,
   onResetTools,
+  onAnalyzeLighting,
+  isAnalyzingLighting,
+  lastLightingAnalysis,
+  onApplyRecommendedPrompt,
 }) => {
 
   const handleAdjustmentChange = (key: keyof ImageAdjustments, value: number) => {
@@ -48,7 +59,7 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
   };
 
   return (
-    <div id="tour-adjustments-panel" className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-6 text-slate-200">
+    <div id="tour-adjustments-panel" className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-5 text-slate-200">
       
       {/* Title & Reset */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-800">
@@ -66,6 +77,75 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
           <RotateCcw className="w-3 h-3" />
           <span>Reset</span>
         </button>
+      </div>
+
+      {/* AI Studio Lighting Analyzer Card */}
+      <div className="bg-slate-950 p-4 rounded-xl border border-indigo-500/30 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2 text-xs font-bold text-indigo-300">
+            <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
+            <span>AI Studio Lighting Analyzer</span>
+          </div>
+          <span className="text-[10px] text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full font-mono">
+            Gemini AI
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-400 leading-relaxed">
+          Analyze photo exposure, shadow direction, and contrast to apply optimal studio settings automatically.
+        </p>
+
+        <button
+          onClick={onAnalyzeLighting}
+          disabled={isAnalyzingLighting}
+          className="w-full py-2.5 px-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition shadow-lg shadow-indigo-600/25 flex items-center justify-center space-x-2"
+        >
+          {isAnalyzingLighting ? (
+            <>
+              <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+              <span>Analyzing Photo Lighting...</span>
+            </>
+          ) : (
+            <>
+              <Lightbulb className="w-4 h-4 text-amber-300" />
+              <span>Analyze & Auto-Set Optimal Lighting</span>
+            </>
+          )}
+        </button>
+
+        {lastLightingAnalysis && (
+          <div className="bg-slate-900/90 rounded-xl p-3 border border-slate-800 space-y-2 mt-2">
+            <div className="text-[11px] text-slate-300 font-medium flex items-start space-x-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+              <div>
+                <span className="font-bold text-white">AI Assessment: </span>
+                <span>{lastLightingAnalysis.lightingAssessment}</span>
+              </div>
+            </div>
+
+            <div className="text-[10px] text-slate-400 flex flex-wrap gap-1.5 pt-1">
+              <span className="bg-slate-800 px-2 py-0.5 rounded text-indigo-300">
+                Brightness: {lastLightingAnalysis.brightness > 0 ? `+${lastLightingAnalysis.brightness}` : lastLightingAnalysis.brightness}
+              </span>
+              <span className="bg-slate-800 px-2 py-0.5 rounded text-indigo-300">
+                Contrast: {lastLightingAnalysis.contrast > 0 ? `+${lastLightingAnalysis.contrast}` : lastLightingAnalysis.contrast}
+              </span>
+              <span className="bg-slate-800 px-2 py-0.5 rounded text-indigo-300">
+                Shadow: {lastLightingAnalysis.shadow.opacity}% opacity
+              </span>
+            </div>
+
+            {lastLightingAnalysis.recommendedPrompt && (
+              <button
+                onClick={() => onApplyRecommendedPrompt(lastLightingAnalysis.recommendedPrompt)}
+                className="w-full mt-1 py-1.5 px-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-[11px] font-semibold rounded-lg border border-indigo-500/30 transition flex items-center justify-between group"
+              >
+                <span className="truncate mr-1">Prompt: "{lastLightingAnalysis.recommendedPrompt}"</span>
+                <ArrowRight className="w-3 h-3 shrink-0 group-hover:translate-x-0.5 transition" />
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Background Fill & Swatches */}

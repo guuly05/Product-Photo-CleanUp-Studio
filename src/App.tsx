@@ -12,7 +12,8 @@ import {
   ImageAdjustments,
   BackgroundSettings,
   ShadowSettings,
-  SampleProduct
+  SampleProduct,
+  LightingAnalysisResult
 } from './types';
 import { exportEditedPhoto } from './utils/canvasExport';
 import { Sparkles, Sliders, Upload, ShieldCheck } from 'lucide-react';
@@ -86,8 +87,72 @@ export default function App() {
   const [background, setBackground] = useState<BackgroundSettings>(INITIAL_BG);
   const [shadow, setShadow] = useState<ShadowSettings>(INITIAL_SHADOW);
 
+  // AI Lighting Analysis state
+  const [isAnalyzingLighting, setIsAnalyzingLighting] = useState<boolean>(false);
+  const [lastLightingAnalysis, setLastLightingAnalysis] = useState<LightingAnalysisResult | null>(null);
+
   const currentStep = history[historyIndex] || history[0];
   const originalStep = history[0];
+
+  // AI Lighting Analysis Handler
+  const handleAnalyzeLighting = async () => {
+    if (!currentStep?.imageUrl) return;
+    setIsAnalyzingLighting(true);
+    setErrorMessage(null);
+
+    try {
+      const response = await fetch('/api/analyze-lighting', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          image: currentStep.imageUrl,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Failed to analyze lighting with AI model');
+      }
+
+      const analysis: LightingAnalysisResult = data.analysis;
+      setLastLightingAnalysis(analysis);
+
+      // Auto apply suggested adjustments
+      if (typeof analysis.brightness === 'number') {
+        setAdjustments(prev => ({
+          ...prev,
+          brightness: analysis.brightness,
+          contrast: analysis.contrast,
+          saturation: analysis.saturation,
+        }));
+      }
+
+      if (analysis.shadow) {
+        setShadow({
+          enabled: Boolean(analysis.shadow.enabled),
+          opacity: Math.min(100, Math.max(0, analysis.shadow.opacity ?? 35)),
+          blur: Math.min(50, Math.max(0, analysis.shadow.blur ?? 15)),
+          offsetY: Math.min(40, Math.max(0, analysis.shadow.offsetY ?? 12)),
+          color: '#000000',
+        });
+      }
+
+      if (analysis.suggestedBackdropColor && analysis.suggestedBackdropColor.startsWith('#')) {
+        setBackground({
+          mode: 'color',
+          color: analysis.suggestedBackdropColor,
+        });
+      }
+    } catch (err: any) {
+      console.error('Analyze lighting error:', err);
+      setErrorMessage(err.message || 'Failed to analyze photo lighting.');
+    } finally {
+      setIsAnalyzingLighting(false);
+    }
+  };
 
   // Submit AI Prompt to Server Route
   const handleSubmitPrompt = async (promptText: string, aspectRatio?: string) => {
@@ -273,6 +338,10 @@ export default function App() {
                 shadow={shadow}
                 onChangeShadow={setShadow}
                 onResetTools={handleResetTools}
+                onAnalyzeLighting={handleAnalyzeLighting}
+                isAnalyzingLighting={isAnalyzingLighting}
+                lastLightingAnalysis={lastLightingAnalysis}
+                onApplyRecommendedPrompt={handleSubmitPrompt}
               />
             </div>
           )}
