@@ -13,6 +13,7 @@ import {
   Trash2,
   X,
   Sparkles,
+  FileText,
 } from 'lucide-react';
 import { ImageAdjustments, BackgroundSettings, ShadowSettings } from '../types';
 
@@ -26,6 +27,7 @@ interface BeforeAfterSliderProps {
   isProcessing: boolean;
   activePrompt?: string;
   onSmartEraserApply?: (newImageUrl: string, label: string) => void;
+  onOpenImageInfo?: () => void;
 }
 
 export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
@@ -38,6 +40,7 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
   isProcessing,
   activePrompt,
   onSmartEraserApply,
+  onOpenImageInfo,
 }) => {
   const [sliderPosition, setSliderPosition] = useState<number>(50); // percentage 0 to 100
   const [zoom, setZoom] = useState<number>(1);
@@ -482,6 +485,18 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
           <Grid className="w-4 h-4" />
           <span className="text-xs font-medium hidden sm:inline">Grid</span>
         </button>
+
+        {/* Asset Metadata & EXIF Info Modal Toggle */}
+        {onOpenImageInfo && (
+          <button
+            onClick={onOpenImageInfo}
+            className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition flex items-center space-x-1.5"
+            title="View image dimensions, file size, EXIF & e-commerce platform specs"
+          >
+            <FileText className="w-4 h-4 text-indigo-400" />
+            <span className="text-xs font-medium hidden sm:inline">Image Info</span>
+          </button>
+        )}
 
       </div>
 

@@ -6,6 +6,7 @@ import { AdjustmentsPanel } from './components/AdjustmentsPanel';
 import { HistoryTimeline } from './components/HistoryTimeline';
 import { SamplePickerModal } from './components/SamplePickerModal';
 import { BatchProcessorModal } from './components/BatchProcessorModal';
+import { ImageInfoModal } from './components/ImageInfoModal';
 import { GuidedTour } from './components/GuidedTour';
 import { SAMPLE_PRODUCTS } from './data/samples';
 import {
@@ -64,6 +65,7 @@ export default function App() {
   const [showAdjustments, setShowAdjustments] = useState<boolean>(true);
   const [isSampleModalOpen, setIsSampleModalOpen] = useState<boolean>(false);
   const [isBatchModalOpen, setIsBatchModalOpen] = useState<boolean>(false);
+  const [isImageInfoModalOpen, setIsImageInfoModalOpen] = useState<boolean>(false);
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -517,6 +519,7 @@ export default function App() {
               isProcessing={isProcessing}
               activePrompt={activePromptText}
               onSmartEraserApply={handleSmartEraserApply}
+              onOpenImageInfo={() => setIsImageInfoModalOpen(true)}
             />
 
             {/* History Steps Bar under Canvas */}
@@ -608,6 +611,15 @@ export default function App() {
           setHistory([newStep]);
           setHistoryIndex(0);
         }}
+      />
+
+      {/* Asset EXIF Metadata & Platform Specs Info Modal */}
+      <ImageInfoModal
+        isOpen={isImageInfoModalOpen}
+        onClose={() => setIsImageInfoModalOpen(false)}
+        currentStep={currentStep}
+        currentUrl={currentStep.imageUrl}
+        totalHistorySteps={history.length}
       />
 
       {/* Guided Tour Overlay */}
