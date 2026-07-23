@@ -308,10 +308,32 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
 
       {/* Image Adjustments Sliders */}
       <div className="space-y-3 pt-3 border-t border-slate-800">
-        <span className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
-          <Sun className="w-3.5 h-3.5 text-indigo-400" />
-          <span>Color & Exposure Controls</span>
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold text-slate-300 flex items-center space-x-1.5">
+            <Sun className="w-3.5 h-3.5 text-indigo-400" />
+            <span>Color & Exposure Controls</span>
+          </span>
+
+          {/* One-Click AI Enhance Toggle Button */}
+          <button
+            type="button"
+            onClick={onAnalyzeLighting}
+            disabled={isAnalyzingLighting}
+            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1.5 border ${
+              lastLightingAnalysis
+                ? 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20'
+                : 'bg-indigo-500/10 text-indigo-300 border-indigo-500/30 hover:bg-indigo-500/20'
+            }`}
+            title="One-Click AI Auto-Enhance contrast, brightness & saturation"
+          >
+            {isAnalyzingLighting ? (
+              <div className="w-3 h-3 rounded-full border-2 border-indigo-400/20 border-t-indigo-400 animate-spin" />
+            ) : (
+              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+            )}
+            <span>{isAnalyzingLighting ? 'Enhancing...' : lastLightingAnalysis ? 'AI Enhanced' : 'One-Click Enhance'}</span>
+          </button>
+        </div>
 
         {/* Brightness */}
         <div>
