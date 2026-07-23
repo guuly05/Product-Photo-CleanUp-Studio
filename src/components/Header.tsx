@@ -10,11 +10,13 @@ import {
   ChevronDown,
   Layers,
   Zap,
-  Info
+  Info,
+  FolderArchive
 } from 'lucide-react';
 
 interface HeaderProps {
   onOpenSamples: () => void;
+  onOpenBatchProcessor: () => void;
   onReset: () => void;
   onDownload: (format: 'png' | 'jpeg', transparent: boolean) => void;
   onExportAllZip: () => void;
@@ -31,6 +33,7 @@ interface HeaderProps {
 
 export const Header: React.FC<HeaderProps> = ({
   onOpenSamples,
+  onOpenBatchProcessor,
   onReset,
   onDownload,
   onExportAllZip,
@@ -121,6 +124,16 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <Images className="w-4 h-4 text-indigo-400" />
             <span className="hidden sm:inline">Samples</span>
+          </button>
+
+          {/* Batch Processor ZIP */}
+          <button
+            onClick={onOpenBatchProcessor}
+            className="px-3 py-2 rounded-xl bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-medium border border-indigo-500/30 transition flex items-center space-x-1.5"
+            title="Batch process ZIP file of product photos"
+          >
+            <FolderArchive className="w-4 h-4 text-indigo-400" />
+            <span className="hidden sm:inline">Batch ZIP</span>
           </button>
 
           {/* Toggle Before / After Split Slider */}

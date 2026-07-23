@@ -5,6 +5,7 @@ import { InstructionConsole } from './components/InstructionConsole';
 import { AdjustmentsPanel } from './components/AdjustmentsPanel';
 import { HistoryTimeline } from './components/HistoryTimeline';
 import { SamplePickerModal } from './components/SamplePickerModal';
+import { BatchProcessorModal } from './components/BatchProcessorModal';
 import { GuidedTour } from './components/GuidedTour';
 import { SAMPLE_PRODUCTS } from './data/samples';
 import {
@@ -62,6 +63,7 @@ export default function App() {
   const [isComparing, setIsComparing] = useState<boolean>(false);
   const [showAdjustments, setShowAdjustments] = useState<boolean>(true);
   const [isSampleModalOpen, setIsSampleModalOpen] = useState<boolean>(false);
+  const [isBatchModalOpen, setIsBatchModalOpen] = useState<boolean>(false);
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -482,6 +484,7 @@ export default function App() {
       {/* Top Application Navigation */}
       <Header
         onOpenSamples={() => setIsSampleModalOpen(true)}
+        onOpenBatchProcessor={() => setIsBatchModalOpen(true)}
         onReset={handleReset}
         onDownload={handleDownload}
         onExportAllZip={handleExportAllZip}
@@ -583,6 +586,28 @@ export default function App() {
         isOpen={isSampleModalOpen}
         onClose={() => setIsSampleModalOpen(false)}
         onSelectSample={handleSelectSample}
+      />
+
+      {/* Batch Processor ZIP Modal */}
+      <BatchProcessorModal
+        isOpen={isBatchModalOpen}
+        onClose={() => setIsBatchModalOpen(false)}
+        selectedModel={selectedModel}
+        onLoadImageToStudio={(imageUrl, label) => {
+          const newStep: EditHistoryItem = {
+            id: `batch-item-${Date.now()}`,
+            timestamp: Date.now(),
+            imageUrl,
+            prompt: 'Batch processed product photo',
+            label,
+            type: 'ai_edit',
+            adjustments: { ...INITIAL_ADJUSTMENTS },
+            background: { ...INITIAL_BG },
+            shadow: { ...INITIAL_SHADOW },
+          };
+          setHistory([newStep]);
+          setHistoryIndex(0);
+        }}
       />
 
       {/* Guided Tour Overlay */}
