@@ -7,6 +7,8 @@ import {
   Droplet,
   Layers,
   RotateCcw,
+  Undo2,
+  Redo2,
   Sparkles,
   Maximize,
   Box,
@@ -28,6 +30,10 @@ interface AdjustmentsPanelProps {
   isAnalyzingLighting: boolean;
   lastLightingAnalysis: LightingAnalysisResult | null;
   onApplyRecommendedPrompt: (prompt: string) => void;
+  canUndoTool?: boolean;
+  canRedoTool?: boolean;
+  onUndoTool?: () => void;
+  onRedoTool?: () => void;
 }
 
 export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
@@ -42,6 +48,10 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
   isAnalyzingLighting,
   lastLightingAnalysis,
   onApplyRecommendedPrompt,
+  canUndoTool = false,
+  canRedoTool = false,
+  onUndoTool,
+  onRedoTool,
 }) => {
 
   const handleAdjustmentChange = (key: keyof ImageAdjustments, value: number) => {
@@ -61,7 +71,7 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
   return (
     <div id="tour-adjustments-panel" className="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-xl space-y-5 text-slate-200">
       
-      {/* Title & Reset */}
+      {/* Title & Undo/Redo/Reset Controls */}
       <div className="flex items-center justify-between pb-3 border-b border-slate-800">
         <div className="flex items-center space-x-2">
           <Sliders className="w-4 h-4 text-indigo-400" />
@@ -69,14 +79,40 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
             Studio Post-Processing
           </h3>
         </div>
-        <button
-          onClick={onResetTools}
-          className="text-xs text-slate-400 hover:text-white flex items-center space-x-1 transition"
-          title="Reset tools to default"
-        >
-          <RotateCcw className="w-3 h-3" />
-          <span>Reset</span>
-        </button>
+
+        <div className="flex items-center space-x-2">
+          {/* Tool Undo / Redo buttons */}
+          <div className="flex items-center space-x-0.5 bg-slate-950 p-1 rounded-lg border border-slate-800">
+            <button
+              type="button"
+              onClick={onUndoTool}
+              disabled={!canUndoTool}
+              className="p-1 rounded text-slate-400 hover:text-indigo-300 hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition"
+              title="Undo adjustment (Ctrl+Z)"
+            >
+              <Undo2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              type="button"
+              onClick={onRedoTool}
+              disabled={!canRedoTool}
+              className="p-1 rounded text-slate-400 hover:text-indigo-300 hover:bg-slate-800 disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400 transition"
+              title="Redo adjustment (Ctrl+Y)"
+            >
+              <Redo2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={onResetTools}
+            className="text-xs text-slate-400 hover:text-white flex items-center space-x-1 transition px-2 py-1 rounded bg-slate-950 border border-slate-800"
+            title="Reset tools to default"
+          >
+            <RotateCcw className="w-3 h-3" />
+            <span>Reset</span>
+          </button>
+        </div>
       </div>
 
       {/* AI Studio Lighting Analyzer Card */}

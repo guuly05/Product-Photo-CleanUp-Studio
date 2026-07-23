@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Header } from './components/Header';
 import { BeforeAfterSlider } from './components/BeforeAfterSlider';
 import { InstructionConsole } from './components/InstructionConsole';
@@ -87,6 +87,126 @@ export default function App() {
   const [background, setBackground] = useState<BackgroundSettings>(INITIAL_BG);
   const [shadow, setShadow] = useState<ShadowSettings>(INITIAL_SHADOW);
 
+  // Tool Undo / Redo Stack State
+  interface ToolSnapshot {
+    adjustments: ImageAdjustments;
+    background: BackgroundSettings;
+    shadow: ShadowSettings;
+  }
+
+  const [toolHistory, setToolHistory] = useState<ToolSnapshot[]>([
+    { adjustments: INITIAL_ADJUSTMENTS, background: INITIAL_BG, shadow: INITIAL_SHADOW }
+  ]);
+  const [toolPointer, setToolPointer] = useState<number>(0);
+  const isUndoRedoRef = useRef<boolean>(false);
+  const lastChangeTimeRef = useRef<number>(Date.now());
+
+  // Record tool adjustment changes into Undo/Redo stack
+  useEffect(() => {
+    if (isUndoRedoRef.current) {
+      isUndoRedoRef.current = false;
+      return;
+    }
+
+    const currentSnapshot = toolHistory[toolPointer];
+    if (
+      currentSnapshot &&
+      JSON.stringify(currentSnapshot.adjustments) === JSON.stringify(adjustments) &&
+      JSON.stringify(currentSnapshot.background) === JSON.stringify(background) &&
+      JSON.stringify(currentSnapshot.shadow) === JSON.stringify(shadow)
+    ) {
+      return;
+    }
+
+    const newSnapshot: ToolSnapshot = {
+      adjustments,
+      background,
+      shadow,
+    };
+
+    const now = Date.now();
+    const timeDiff = now - lastChangeTimeRef.current;
+    lastChangeTimeRef.current = now;
+
+    if (timeDiff < 400 && toolHistory.length > 0) {
+      // Update active pointer in place during fast continuous slider drag
+      setToolHistory(prev => {
+        const updated = [...prev];
+        if (updated[toolPointer]) {
+          updated[toolPointer] = newSnapshot;
+        }
+        return updated;
+      });
+    } else {
+      // Truncate redo stack and push new snapshot
+      setToolHistory(prev => {
+        const truncated = prev.slice(0, toolPointer + 1);
+        return [...truncated, newSnapshot];
+      });
+      setToolPointer(prev => prev + 1);
+    }
+  }, [adjustments, background, shadow]);
+
+  // Undo / Redo Tool Actions
+  const canUndoTool = toolPointer > 0;
+  const canRedoTool = toolPointer < toolHistory.length - 1;
+
+  const handleToolUndo = () => {
+    if (toolPointer <= 0) return;
+    const targetIndex = toolPointer - 1;
+    const targetSnapshot = toolHistory[targetIndex];
+    if (targetSnapshot) {
+      isUndoRedoRef.current = true;
+      setToolPointer(targetIndex);
+      setAdjustments(targetSnapshot.adjustments);
+      setBackground(targetSnapshot.background);
+      setShadow(targetSnapshot.shadow);
+    }
+  };
+
+  const handleToolRedo = () => {
+    if (toolPointer >= toolHistory.length - 1) return;
+    const targetIndex = toolPointer + 1;
+    const targetSnapshot = toolHistory[targetIndex];
+    if (targetSnapshot) {
+      isUndoRedoRef.current = true;
+      setToolPointer(targetIndex);
+      setAdjustments(targetSnapshot.adjustments);
+      setBackground(targetSnapshot.background);
+      setShadow(targetSnapshot.shadow);
+    }
+  };
+
+  // Keyboard shortcut listener for Undo (Ctrl+Z / Cmd+Z) and Redo (Ctrl+Y / Cmd+Shift+Z)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (
+        target &&
+        (target.tagName === 'INPUT' ||
+          target.tagName === 'TEXTAREA' ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      const isCmdOrCtrl = e.metaKey || e.ctrlKey;
+      if (isCmdOrCtrl && !e.shiftKey && e.key.toLowerCase() === 'z') {
+        e.preventDefault();
+        handleToolUndo();
+      } else if (
+        (isCmdOrCtrl && e.shiftKey && e.key.toLowerCase() === 'z') ||
+        (isCmdOrCtrl && e.key.toLowerCase() === 'y')
+      ) {
+        e.preventDefault();
+        handleToolRedo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toolPointer, toolHistory]);
+
   // AI Lighting Analysis state
   const [isAnalyzingLighting, setIsAnalyzingLighting] = useState<boolean>(false);
   const [lastLightingAnalysis, setLastLightingAnalysis] = useState<LightingAnalysisResult | null>(null);
@@ -124,9 +244,15 @@ export default function App() {
     setHistoryIndex(index);
     const item = history[index];
     if (item) {
-      if (item.adjustments) setAdjustments(item.adjustments);
-      if (item.background) setBackground(item.background);
-      if (item.shadow) setShadow(item.shadow);
+      const adj = item.adjustments || INITIAL_ADJUSTMENTS;
+      const bg = item.background || INITIAL_BG;
+      const shd = item.shadow || INITIAL_SHADOW;
+      isUndoRedoRef.current = true;
+      setAdjustments(adj);
+      setBackground(bg);
+      setShadow(shd);
+      setToolHistory([{ adjustments: adj, background: bg, shadow: shd }]);
+      setToolPointer(0);
     }
   };
 
@@ -395,6 +521,10 @@ export default function App() {
                 isAnalyzingLighting={isAnalyzingLighting}
                 lastLightingAnalysis={lastLightingAnalysis}
                 onApplyRecommendedPrompt={handleSubmitPrompt}
+                canUndoTool={canUndoTool}
+                canRedoTool={canRedoTool}
+                onUndoTool={handleToolUndo}
+                onRedoTool={handleToolRedo}
               />
             </div>
           )}
