@@ -15,7 +15,7 @@ import {
   SampleProduct,
   LightingAnalysisResult
 } from './types';
-import { exportEditedPhoto } from './utils/canvasExport';
+import { exportEditedPhoto, exportAllHistoryAsZip } from './utils/canvasExport';
 import { Sparkles, Sliders, Upload, ShieldCheck } from 'lucide-react';
 
 const INITIAL_ADJUSTMENTS: ImageAdjustments = {
@@ -90,9 +90,59 @@ export default function App() {
   // AI Lighting Analysis state
   const [isAnalyzingLighting, setIsAnalyzingLighting] = useState<boolean>(false);
   const [lastLightingAnalysis, setLastLightingAnalysis] = useState<LightingAnalysisResult | null>(null);
+  const [isExportingZip, setIsExportingZip] = useState<boolean>(false);
 
   const currentStep = history[historyIndex] || history[0];
   const originalStep = history[0];
+
+  // Preserve individual edited settings on the active history item
+  useEffect(() => {
+    setHistory(prev => {
+      if (!prev[historyIndex]) return prev;
+      const currentItem = prev[historyIndex];
+      // Only update if changed
+      if (
+        currentItem.adjustments === adjustments &&
+        currentItem.background === background &&
+        currentItem.shadow === shadow
+      ) {
+        return prev;
+      }
+      const updated = [...prev];
+      updated[historyIndex] = {
+        ...currentItem,
+        adjustments,
+        background,
+        shadow,
+      };
+      return updated;
+    });
+  }, [adjustments, background, shadow, historyIndex]);
+
+  // Handle switching active history step and restoring its saved settings
+  const handleSelectHistoryItem = (index: number) => {
+    setHistoryIndex(index);
+    const item = history[index];
+    if (item) {
+      if (item.adjustments) setAdjustments(item.adjustments);
+      if (item.background) setBackground(item.background);
+      if (item.shadow) setShadow(item.shadow);
+    }
+  };
+
+  // Export all history items as ZIP
+  const handleExportAllZip = async () => {
+    setIsExportingZip(true);
+    setErrorMessage(null);
+    try {
+      await exportAllHistoryAsZip(history, adjustments, background, shadow);
+    } catch (err: any) {
+      console.error('Export ZIP failed:', err);
+      setErrorMessage(err.message || 'Failed to generate history ZIP package.');
+    } finally {
+      setIsExportingZip(false);
+    }
+  };
 
   // AI Lighting Analysis Handler
   const handleAnalyzeLighting = async () => {
@@ -289,6 +339,7 @@ export default function App() {
         onOpenSamples={() => setIsSampleModalOpen(true)}
         onReset={handleReset}
         onDownload={handleDownload}
+        onExportAllZip={handleExportAllZip}
         isComparing={isComparing}
         onToggleCompare={() => setIsComparing(!isComparing)}
         showAdjustments={showAdjustments}
@@ -323,7 +374,9 @@ export default function App() {
             <HistoryTimeline
               history={history}
               currentIndex={historyIndex}
-              onSelectHistoryItem={setHistoryIndex}
+              onSelectHistoryItem={handleSelectHistoryItem}
+              onExportAllZip={handleExportAllZip}
+              isExportingZip={isExportingZip}
             />
           </div>
 

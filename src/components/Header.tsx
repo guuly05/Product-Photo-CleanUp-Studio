@@ -17,6 +17,7 @@ interface HeaderProps {
   onOpenSamples: () => void;
   onReset: () => void;
   onDownload: (format: 'png' | 'jpeg', transparent: boolean) => void;
+  onExportAllZip: () => void;
   isComparing: boolean;
   onToggleCompare: () => void;
   showAdjustments: boolean;
@@ -32,6 +33,7 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenSamples,
   onReset,
   onDownload,
+  onExportAllZip,
   isComparing,
   onToggleCompare,
   showAdjustments,
@@ -207,6 +209,22 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <span className="font-medium">JPG E-Commerce</span>
                   <span className="text-[10px] text-slate-400">.jpg</span>
+                </button>
+                
+                <button
+                  onClick={() => {
+                    onExportAllZip();
+                    setDownloadMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2.5 bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 font-semibold flex items-center justify-between border-t border-indigo-500/30 transition"
+                >
+                  <span className="flex items-center space-x-1.5">
+                    <Layers className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Export All Steps</span>
+                  </span>
+                  <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded font-mono">
+                    .zip
+                  </span>
                 </button>
               </div>
             )}

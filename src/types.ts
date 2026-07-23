@@ -5,6 +5,9 @@ export interface EditHistoryItem {
   prompt: string;
   label: string;
   type: 'original' | 'ai_edit' | 'adjustment';
+  adjustments?: ImageAdjustments;
+  background?: BackgroundSettings;
+  shadow?: ShadowSettings;
 }
 
 export interface ImageAdjustments {
