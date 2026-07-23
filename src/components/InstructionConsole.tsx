@@ -41,6 +41,28 @@ export const InstructionConsole: React.FC<InstructionConsoleProps> = ({
 }) => {
   const [promptInput, setPromptInput] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'background' | 'cleanup' | 'ecommerce' | 'aesthetic'>('all');
+  const [showPromptLibrary, setShowPromptLibrary] = useState<boolean>(false);
+
+  // Common retouching phrases library
+  const PROMPT_LIBRARY_ITEMS = [
+    { label: 'Remove Dust & Lint', phrase: 'remove dust, lint, and surface specks' },
+    { label: 'Fix Glare & Hotspots', phrase: 'fix harsh glare and tone down hot spots' },
+    { label: 'Smooth Scratches', phrase: 'smooth out surface scratches and blemishes' },
+    { label: 'Pure White Backdrop', phrase: 'isolate product on pure white background (#FFFFFF)' },
+    { label: 'Studio Soft Shadow', phrase: 'add soft natural contact drop shadow' },
+    { label: 'Subtle Reflection', phrase: 'add subtle ground mirror reflection under product' },
+    { label: 'Boost Lighting & Contrast', phrase: 'enhance studio lighting and boost contrast' },
+    { label: 'White Balance Exposure', phrase: 'correct color warmth and auto-white-balance' },
+    { label: 'Marble Pedestal', phrase: 'place product on polished marble pedestal' },
+  ];
+
+  const handleAppendPhrase = (phrase: string) => {
+    setPromptInput((prev) => {
+      if (!prev.trim()) return phrase;
+      if (prev.toLowerCase().includes(phrase.toLowerCase())) return prev;
+      return `${prev.trim()}, ${phrase}`;
+    });
+  };
 
   const filteredPresets = selectedCategory === 'all'
     ? PRESET_INSTRUCTIONS
@@ -105,6 +127,38 @@ export const InstructionConsole: React.FC<InstructionConsoleProps> = ({
             <span>{isProcessing ? 'Editing...' : 'Apply'}</span>
           </button>
         </form>
+
+        {/* Prompt Library Suggestions Bar */}
+        <div className="mt-2.5">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
+              <Tag className="w-3 h-3 text-indigo-400" />
+              <span>Prompt Library (Quick Retouching Phrases)</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setShowPromptLibrary(!showPromptLibrary)}
+              className="text-[10px] text-indigo-400 hover:text-indigo-300 font-medium"
+            >
+              {showPromptLibrary ? 'Hide Library' : 'View All Phrases'}
+            </button>
+          </div>
+
+          <div className="flex flex-wrap gap-1.5">
+            {(showPromptLibrary ? PROMPT_LIBRARY_ITEMS : PROMPT_LIBRARY_ITEMS.slice(0, 5)).map((item, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleAppendPhrase(item.phrase)}
+                className="px-2.5 py-1 bg-slate-950 hover:bg-indigo-950/60 text-slate-300 hover:text-indigo-200 text-xs font-medium rounded-lg border border-slate-800 hover:border-indigo-500/40 transition flex items-center space-x-1 group"
+                title={`Click to add "${item.phrase}"`}
+              >
+                <span className="text-indigo-400 group-hover:scale-110 transition">+</span>
+                <span>{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
 
         {error && (
           <div className="mt-2 text-xs text-rose-400 bg-rose-950/40 border border-rose-800/60 rounded-xl p-2.5 flex items-center space-x-2">

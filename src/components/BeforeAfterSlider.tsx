@@ -220,48 +220,66 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
       </div>
 
       {/* Floating Toolbar Controls on Canvas */}
-      <div className="absolute bottom-4 left-4 z-20 flex items-center space-x-1.5 bg-slate-900/90 backdrop-blur-md px-2.5 py-1.5 rounded-xl border border-slate-800 text-slate-300 shadow-lg">
+      <div className="absolute bottom-4 left-4 z-20 flex items-center space-x-2 bg-slate-900/90 backdrop-blur-md px-3 py-2 rounded-xl border border-slate-800 text-slate-300 shadow-xl">
         
-        {/* Zoom In / Out */}
-        <button
-          onClick={() => setZoom((z) => Math.min(z + 0.25, 3))}
-          className="p-1.5 hover:bg-slate-800 rounded-lg transition"
-          title="Zoom In"
-        >
-          <ZoomIn className="w-4 h-4" />
-        </button>
+        {/* Zoom In / Out with Range Slider */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setZoom((z) => Math.max(parseFloat((z - 0.25).toFixed(2)), 0.5))}
+            className="p-1 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-white"
+            title="Zoom Out"
+          >
+            <ZoomOut className="w-4 h-4" />
+          </button>
 
-        <span className="text-[11px] font-mono text-slate-400 w-10 text-center">
-          {Math.round(zoom * 100)}%
-        </span>
+          {/* Interactive Zoom Slider */}
+          <input
+            type="range"
+            min="0.5"
+            max="3"
+            step="0.05"
+            value={zoom}
+            onChange={(e) => setZoom(parseFloat(e.target.value))}
+            className="w-20 sm:w-28 accent-indigo-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+            title="Inspect small product blemishes with zoom"
+          />
 
-        <button
-          onClick={() => setZoom((z) => Math.max(z - 0.25, 0.5))}
-          className="p-1.5 hover:bg-slate-800 rounded-lg transition"
-          title="Zoom Out"
-        >
-          <ZoomOut className="w-4 h-4" />
-        </button>
+          <button
+            onClick={() => setZoom((z) => Math.min(parseFloat((z + 0.25).toFixed(2)), 3))}
+            className="p-1 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-white"
+            title="Zoom In"
+          >
+            <ZoomIn className="w-4 h-4" />
+          </button>
 
-        <button
-          onClick={() => setZoom(1)}
-          className="p-1.5 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-white"
-          title="Reset Zoom"
-        >
-          <Maximize className="w-4 h-4" />
-        </button>
+          <span className="text-[11px] font-mono text-indigo-300 w-11 text-center font-bold bg-indigo-500/10 px-1.5 py-0.5 rounded border border-indigo-500/20">
+            {Math.round(zoom * 100)}%
+          </span>
+
+          {zoom !== 1 && (
+            <button
+              onClick={() => setZoom(1)}
+              className="p-1 hover:bg-slate-800 rounded-lg transition text-slate-400 hover:text-white flex items-center space-x-1 text-[10px] font-medium"
+              title="Reset Zoom to 100%"
+            >
+              <Maximize className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Reset</span>
+            </button>
+          )}
+        </div>
 
         <div className="w-px h-4 bg-slate-800 my-auto mx-1" />
 
         {/* Alignment Grid Overlay Toggle */}
         <button
           onClick={() => setShowGrid(!showGrid)}
-          className={`p-1.5 rounded-lg transition ${
+          className={`p-1.5 rounded-lg transition flex items-center space-x-1.5 ${
             showGrid ? 'bg-indigo-600 text-white' : 'hover:bg-slate-800 text-slate-400'
           }`}
           title="Toggle Center Alignment Grid"
         >
           <Grid className="w-4 h-4" />
+          <span className="text-xs font-medium hidden sm:inline">Grid</span>
         </button>
 
       </div>
