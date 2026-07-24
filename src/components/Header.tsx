@@ -20,12 +20,19 @@ import {
   CloudCheck,
   Save,
   FileJson,
-  FileUp
+  FileUp,
+  BarChart3,
+  Flame,
+  Clock,
+  Trophy
 } from 'lucide-react';
+import { WorkspaceStats, formatTimeSaved, calculateUserLevelAndXp } from '../utils/workspaceStats';
 
 interface HeaderProps {
   onOpenSamples: () => void;
   onOpenBatchProcessor: () => void;
+  onOpenWorkspaceStats?: () => void;
+  workspaceStats?: WorkspaceStats;
   onReset: () => void;
   onDownload: (format: 'png' | 'jpeg', transparent: boolean) => void;
   onExportAllZip: () => void;
@@ -46,6 +53,8 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
   onOpenSamples,
   onOpenBatchProcessor,
+  onOpenWorkspaceStats,
+  workspaceStats,
   onReset,
   onDownload,
   onExportAllZip,
@@ -152,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({
 
             {/* Profile Dropdown Popup */}
             {profileMenuOpen && (
-              <div className="absolute left-0 mt-2 w-56 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl py-2 z-50 text-slate-200 animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="absolute left-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl py-2 z-50 text-slate-200 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-3.5 py-2.5 border-b border-slate-800/80 bg-slate-950/40 rounded-t-2xl">
                   <div className="flex items-center space-x-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
@@ -163,10 +172,56 @@ export const Header: React.FC<HeaderProps> = ({
                   </div>
                 </div>
 
+                {/* Workspace Stats Quick Summary Box */}
+                {workspaceStats && (
+                  <div className="mx-2.5 my-2 p-2.5 bg-slate-950 border border-slate-800/80 rounded-xl space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                      <span className="flex items-center space-x-1 text-purple-300">
+                        <Trophy className="w-3 h-3 text-amber-400" />
+                        <span>Level {calculateUserLevelAndXp(workspaceStats).level} Studio</span>
+                      </span>
+                      <span className="text-emerald-400 font-mono">
+                        {formatTimeSaved(workspaceStats.timeSavedMinutes).formatted} Saved
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-1 text-center pt-1 border-t border-slate-800/60">
+                      <div className="bg-slate-900/60 p-1 rounded">
+                        <p className="text-[10px] text-slate-500 font-mono">Edited</p>
+                        <p className="text-xs font-bold text-indigo-300">{workspaceStats.totalImagesEdited}</p>
+                      </div>
+                      <div className="bg-slate-900/60 p-1 rounded">
+                        <p className="text-[10px] text-slate-500 font-mono">Time Saved</p>
+                        <p className="text-xs font-bold text-emerald-400">{formatTimeSaved(workspaceStats.timeSavedMinutes).formatted}</p>
+                      </div>
+                      <div className="bg-slate-900/60 p-1 rounded">
+                        <p className="text-[10px] text-slate-500 font-mono">Batches</p>
+                        <p className="text-xs font-bold text-amber-300">{workspaceStats.batchJobsCompleted}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="py-1">
                   <button
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      if (onOpenWorkspaceStats) onOpenWorkspaceStats();
+                    }}
+                    className="w-full px-3.5 py-2 text-xs font-medium text-slate-200 hover:text-white bg-indigo-500/10 hover:bg-indigo-500/20 flex items-center justify-between transition text-left border-y border-indigo-500/20"
+                  >
+                    <span className="flex items-center space-x-2.5">
+                      <BarChart3 className="w-4 h-4 text-purple-400" />
+                      <span className="font-semibold text-purple-200">Workspace Stats</span>
+                    </span>
+                    <span className="text-[10px] font-bold text-purple-400 bg-purple-500/20 px-1.5 py-0.5 rounded font-mono">
+                      Gamified
+                    </span>
+                  </button>
+
+                  <button
                     onClick={() => setProfileMenuOpen(false)}
-                    className="w-full px-3.5 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 flex items-center space-x-2.5 transition text-left"
+                    className="w-full px-3.5 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800/80 flex items-center space-x-2.5 transition text-left mt-1"
                   >
                     <Settings className="w-4 h-4 text-indigo-400" />
                     <span>Account Settings</span>

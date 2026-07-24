@@ -9,6 +9,7 @@ import { BatchProcessorModal } from './components/BatchProcessorModal';
 import { ImageInfoModal } from './components/ImageInfoModal';
 import { GuidedTour } from './components/GuidedTour';
 import { RestoreSessionModal } from './components/RestoreSessionModal';
+import { WorkspaceStatsModal } from './components/WorkspaceStatsModal';
 import { SAMPLE_PRODUCTS } from './data/samples';
 import {
   EditHistoryItem,
@@ -22,6 +23,12 @@ import {
 } from './types';
 import { exportEditedPhoto, exportAllHistoryAsZip } from './utils/canvasExport';
 import { analyzeProductImageTags } from './utils/tagAnalysis';
+import {
+  WorkspaceStats,
+  getWorkspaceStats,
+  recordImageEditStats,
+  recordBatchJobStats
+} from './utils/workspaceStats';
 import { Sparkles, Sliders, Upload, ShieldCheck } from 'lucide-react';
 
 const INITIAL_ADJUSTMENTS: ImageAdjustments = {
@@ -80,6 +87,8 @@ export default function App() {
   const [isBatchModalOpen, setIsBatchModalOpen] = useState<boolean>(false);
   const [isImageInfoModalOpen, setIsImageInfoModalOpen] = useState<boolean>(false);
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
+  const [isStatsModalOpen, setIsStatsModalOpen] = useState<boolean>(false);
+  const [workspaceStats, setWorkspaceStats] = useState<WorkspaceStats>(getWorkspaceStats());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // AI Product Tags & Taxonomy State
@@ -554,6 +563,10 @@ export default function App() {
       setHistory(newHistory);
       setHistoryIndex(newHistory.length - 1);
       setIsComparing(true); // Automatically show split view after edit so user can appreciate the cleanup!
+      
+      // Record workspace stats for AI edit
+      const updatedStats = recordImageEditStats(1, true);
+      setWorkspaceStats(updatedStats);
     } catch (err: any) {
       console.error('Submit prompt error:', err);
       setErrorMessage(err.message || 'An error occurred while processing image instructions.');
@@ -692,6 +705,8 @@ export default function App() {
       <Header
         onOpenSamples={() => setIsSampleModalOpen(true)}
         onOpenBatchProcessor={() => setIsBatchModalOpen(true)}
+        onOpenWorkspaceStats={() => setIsStatsModalOpen(true)}
+        workspaceStats={workspaceStats}
         onReset={handleReset}
         onDownload={handleDownload}
         onExportAllZip={handleExportAllZip}
@@ -809,6 +824,10 @@ export default function App() {
         isOpen={isBatchModalOpen}
         onClose={() => setIsBatchModalOpen(false)}
         selectedModel={selectedModel}
+        onBatchCompleted={(count) => {
+          const updated = recordBatchJobStats(count);
+          setWorkspaceStats(updated);
+        }}
         onLoadImageToStudio={(imageUrl, label) => {
           const newStep: EditHistoryItem = {
             id: `batch-item-${Date.now()}`,
@@ -824,6 +843,13 @@ export default function App() {
           setHistory([newStep]);
           setHistoryIndex(0);
         }}
+      />
+
+      {/* Workspace Stats Dashboard Modal */}
+      <WorkspaceStatsModal
+        isOpen={isStatsModalOpen}
+        onClose={() => setIsStatsModalOpen(false)}
+        onStatsUpdated={setWorkspaceStats}
       />
 
       {/* Asset EXIF Metadata & Platform Specs Info Modal */}

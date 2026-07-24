@@ -32,6 +32,7 @@ interface BatchProcessorModalProps {
   onClose: () => void;
   selectedModel: string;
   onLoadImageToStudio: (imageUrl: string, label: string) => void;
+  onBatchCompleted?: (completedCount: number) => void;
 }
 
 export const BatchProcessorModal: React.FC<BatchProcessorModalProps> = ({
@@ -39,6 +40,7 @@ export const BatchProcessorModal: React.FC<BatchProcessorModalProps> = ({
   onClose,
   selectedModel,
   onLoadImageToStudio,
+  onBatchCompleted,
 }) => {
   const [zipFile, setZipFile] = useState<File | null>(null);
   const [batchPrompt, setBatchPrompt] = useState<string>('Isolate product on pure white background (#FFFFFF), fix studio lighting and add subtle soft shadow');
@@ -181,6 +183,16 @@ export const BatchProcessorModal: React.FC<BatchProcessorModalProps> = ({
 
     await Promise.all(pool);
     setIsBatchRunning(false);
+
+    if (onBatchCompleted) {
+      setBatchItems((currentItems) => {
+        const completedCount = currentItems.filter((i) => i.status === 'completed').length;
+        if (completedCount > 0) {
+          onBatchCompleted(completedCount);
+        }
+        return currentItems;
+      });
+    }
   };
 
   // Download all completed retouched items as a new ZIP file
