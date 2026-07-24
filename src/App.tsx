@@ -651,6 +651,40 @@ export default function App() {
     }
   };
 
+  // Download Current Tool Configuration Settings JSON
+  const handleDownloadSettings = () => {
+    const settingsExport = {
+      app: "Product Photo Studio AI",
+      version: "1.0",
+      exportedAt: new Date().toISOString(),
+      configuration: {
+        adjustments,
+        shadow,
+        watermark,
+        background,
+      },
+    };
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(settingsExport, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `studio-preset-${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  // Import Tool Configuration Settings JSON
+  const handleImportSettings = (parsedData: any) => {
+    const config = parsedData?.configuration || parsedData;
+    if (!config) return;
+
+    if (config.adjustments) setAdjustments(config.adjustments);
+    if (config.shadow) setShadow(config.shadow);
+    if (config.watermark) setWatermark(config.watermark);
+    if (config.background) setBackground(config.background);
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans antialiased selection:bg-indigo-600 selection:text-white">
       
@@ -661,6 +695,8 @@ export default function App() {
         onReset={handleReset}
         onDownload={handleDownload}
         onExportAllZip={handleExportAllZip}
+        onDownloadSettings={handleDownloadSettings}
+        onImportSettings={handleImportSettings}
         isComparing={isComparing}
         onToggleCompare={() => setIsComparing(!isComparing)}
         showAdjustments={showAdjustments}

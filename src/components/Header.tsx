@@ -18,7 +18,9 @@ import {
   LogOut,
   ShieldCheck,
   CloudCheck,
-  Save
+  Save,
+  FileJson,
+  FileUp
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -27,6 +29,8 @@ interface HeaderProps {
   onReset: () => void;
   onDownload: (format: 'png' | 'jpeg', transparent: boolean) => void;
   onExportAllZip: () => void;
+  onDownloadSettings: () => void;
+  onImportSettings?: (settings: any) => void;
   isComparing: boolean;
   onToggleCompare: () => void;
   showAdjustments: boolean;
@@ -45,6 +49,8 @@ export const Header: React.FC<HeaderProps> = ({
   onReset,
   onDownload,
   onExportAllZip,
+  onDownloadSettings,
+  onImportSettings,
   isComparing,
   onToggleCompare,
   showAdjustments,
@@ -59,6 +65,24 @@ export const Header: React.FC<HeaderProps> = ({
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleSettingsJsonImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const parsed = JSON.parse(event.target?.result as string);
+        if (onImportSettings) {
+          onImportSettings(parsed);
+        }
+      } catch (err) {
+        alert('Could not parse JSON settings file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   // Close profile menu on outside click
   useEffect(() => {
@@ -234,6 +258,33 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="hidden sm:inline">Batch ZIP</span>
           </button>
 
+          {/* Download Settings Preset JSON Button */}
+          <button
+            onClick={onDownloadSettings}
+            className="px-3 py-2 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 text-purple-300 text-xs font-medium border border-purple-500/30 transition flex items-center space-x-1.5"
+            title="Export current adjustments, shadow, and watermark settings as a reusable JSON file"
+          >
+            <FileJson className="w-4 h-4 text-purple-400" />
+            <span className="hidden xl:inline">Download Settings</span>
+          </button>
+
+          {/* Load Settings Preset JSON Button */}
+          {onImportSettings && (
+            <label
+              className="px-2.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-medium border border-slate-700 transition flex items-center space-x-1.5 cursor-pointer"
+              title="Import saved JSON edit preset settings"
+            >
+              <FileUp className="w-4 h-4 text-indigo-400" />
+              <span className="hidden 2xl:inline">Load Preset</span>
+              <input
+                type="file"
+                accept=".json,application/json"
+                className="hidden"
+                onChange={handleSettingsJsonImport}
+              />
+            </label>
+          )}
+
           {/* Toggle Before / After Split Slider */}
           {hasEditedImage && (
             <button
@@ -320,6 +371,22 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <span className="font-medium">JPG E-Commerce</span>
                   <span className="text-[10px] text-slate-400">.jpg</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    onDownloadSettings();
+                    setDownloadMenuOpen(false);
+                  }}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-700 text-slate-200 flex items-center justify-between border-t border-slate-700/60 transition"
+                >
+                  <span className="flex items-center space-x-1.5">
+                    <FileJson className="w-3.5 h-3.5 text-purple-400" />
+                    <span className="font-medium">Download Settings JSON</span>
+                  </span>
+                  <span className="text-[10px] text-purple-400 bg-purple-500/10 px-1.5 py-0.5 rounded font-mono">
+                    .json
+                  </span>
                 </button>
                 
                 <button

@@ -88,7 +88,7 @@ async function startServer() {
       const ai = getGeminiClient();
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.6-flash",
         contents: {
           parts: [
             {
@@ -183,7 +183,7 @@ Return JSON with:
       const ai = getGeminiClient();
 
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.6-flash",
         contents: {
           parts: [
             {
