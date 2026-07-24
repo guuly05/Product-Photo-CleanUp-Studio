@@ -23,6 +23,46 @@ function getGeminiClient() {
   });
 }
 
+async function resolveImageBase64(
+  imageStr: string,
+  defaultMime: string = "image/png"
+): Promise<{ cleanBase64: string; detectedMime: string }> {
+  if (!imageStr) {
+    throw new Error("No image data provided.");
+  }
+
+  // Handle external HTTP/HTTPS URLs (e.g. Unsplash sample URLs)
+  if (imageStr.startsWith("http://") || imageStr.startsWith("https://")) {
+    const response = await fetch(imageStr);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image from URL (${response.status} ${response.statusText})`);
+    }
+    const contentType = response.headers.get("content-type");
+    const arrayBuffer = await response.arrayBuffer();
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    return {
+      cleanBase64: base64,
+      detectedMime: contentType ? contentType.split(";")[0] : defaultMime,
+    };
+  }
+
+  // Handle data URL scheme (e.g., "data:image/png;base64,...")
+  if (imageStr.includes(";base64,")) {
+    const parts = imageStr.split(";base64,");
+    const mime = parts[0].replace("data:", "") || defaultMime;
+    return {
+      cleanBase64: parts[1],
+      detectedMime: mime,
+    };
+  }
+
+  // Plain base64 string
+  return {
+    cleanBase64: imageStr,
+    detectedMime: defaultMime,
+  };
+}
+
 async function startServer() {
   const app = express();
 
@@ -43,14 +83,7 @@ async function startServer() {
         return res.status(400).json({ error: "Image data is required." });
       }
 
-      let cleanBase64 = image;
-      let detectedMime = mimeType;
-
-      if (image.includes(";base64,")) {
-        const parts = image.split(";base64,");
-        detectedMime = parts[0].replace("data:", "") || mimeType;
-        cleanBase64 = parts[1];
-      }
+      const { cleanBase64, detectedMime } = await resolveImageBase64(image, mimeType);
 
       const ai = getGeminiClient();
 
@@ -136,6 +169,84 @@ Return JSON with:
     }
   });
 
+  // AI Product Tag Analysis endpoint
+  app.post("/api/analyze-tags", async (req, res) => {
+    try {
+      const { image, mimeType = "image/png", filename = "" } = req.body;
+
+      if (!image) {
+        return res.status(400).json({ error: "Image data is required for product tag analysis." });
+      }
+
+      const { cleanBase64, detectedMime } = await resolveImageBase64(image, mimeType);
+
+      const ai = getGeminiClient();
+
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: {
+          parts: [
+            {
+              inlineData: {
+                data: cleanBase64,
+                mimeType: detectedMime,
+              },
+            },
+            {
+              text: `Analyze this commercial product photo as an e-commerce product catalog taxonomist.
+Examine the subject matter, category, material, style, composition, lighting depth (e.g., 'macro', 'studio-shot', 'flatlay', 'close-up'), and e-commerce applicability.
+Context filename: "${filename}"
+
+Return JSON with:
+- tags: array of 5 to 8 concise, lower-case tags (e.g., ["electronics", "audio", "macro", "wireless", "matte-black", "studio", "ecommerce"])
+- primaryCategory: main category name (e.g., "Electronics", "Apparel & Accessories", "Footwear", "Beauty & Cosmetics", "Home & Goods")
+- confidence: number between 0.8 and 1.0
+- summary: 1 short sentence describing the product subject`,
+            },
+          ],
+        },
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              tags: {
+                type: "ARRAY",
+                items: { type: "STRING" },
+              },
+              primaryCategory: { type: "STRING" },
+              confidence: { type: "NUMBER" },
+              summary: { type: "STRING" },
+            },
+            required: ["tags", "primaryCategory", "confidence", "summary"],
+          },
+        },
+      });
+
+      let tagData = null;
+      if (response.text) {
+        tagData = JSON.parse(response.text);
+      }
+
+      if (!tagData || !Array.isArray(tagData.tags)) {
+        throw new Error("Invalid tag analysis output from AI model.");
+      }
+
+      res.json({
+        success: true,
+        tags: tagData.tags,
+        primaryCategory: tagData.primaryCategory,
+        confidence: tagData.confidence,
+        summary: tagData.summary,
+      });
+    } catch (error: any) {
+      console.error("Error in /api/analyze-tags:", error);
+      res.status(500).json({
+        error: error.message || "Failed to generate AI product tags.",
+      });
+    }
+  });
+
   // Photo editing endpoint using Gemini
   app.post("/api/edit-photo", async (req, res) => {
     try {
@@ -145,15 +256,7 @@ Return JSON with:
         return res.status(400).json({ error: "Both 'image' and 'prompt' are required." });
       }
 
-      // Strip data URL prefix if present (e.g., "data:image/jpeg;base64,...")
-      let cleanBase64 = image;
-      let detectedMime = mimeType;
-
-      if (image.includes(";base64,")) {
-        const parts = image.split(";base64,");
-        detectedMime = parts[0].replace("data:", "") || mimeType;
-        cleanBase64 = parts[1];
-      }
+      const { cleanBase64, detectedMime } = await resolveImageBase64(image, mimeType);
 
       const ai = getGeminiClient();
 

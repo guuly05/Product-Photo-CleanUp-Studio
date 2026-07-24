@@ -14,7 +14,9 @@ import {
   Tag,
   Sliders,
   Copy,
-  Check
+  Check,
+  Plus,
+  RotateCcw
 } from 'lucide-react';
 import { EditHistoryItem } from '../types';
 
@@ -24,6 +26,12 @@ interface ImageInfoModalProps {
   currentStep?: EditHistoryItem;
   currentUrl?: string;
   totalHistorySteps: number;
+  productTags?: string[];
+  primaryCategory?: string;
+  isAnalyzingTags?: boolean;
+  onReanalyzeTags?: () => void;
+  onAddCustomTag?: (tag: string) => void;
+  onRemoveTag?: (tag: string) => void;
 }
 
 interface ImageMetadata {
@@ -44,10 +52,18 @@ export const ImageInfoModal: React.FC<ImageInfoModalProps> = ({
   currentStep,
   currentUrl,
   totalHistorySteps,
+  productTags = [],
+  primaryCategory = 'Product Catalog',
+  isAnalyzingTags = false,
+  onReanalyzeTags,
+  onAddCustomTag,
+  onRemoveTag,
 }) => {
   const [metadata, setMetadata] = useState<ImageMetadata | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [copied, setCopied] = useState<boolean>(false);
+  const [copiedTags, setCopiedTags] = useState<boolean>(false);
+  const [newTagInput, setNewTagInput] = useState<string>('');
 
   useEffect(() => {
     if (!isOpen || !currentUrl) return;
@@ -131,6 +147,21 @@ export const ImageInfoModal: React.FC<ImageInfoModalProps> = ({
     navigator.clipboard.writeText(summary);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleCopyTags = () => {
+    if (!productTags.length) return;
+    const formattedHashtags = productTags.map(t => `#${t.replace(/\s+/g, '')}`).join(' ');
+    navigator.clipboard.writeText(formattedHashtags);
+    setCopiedTags(true);
+    setTimeout(() => setCopiedTags(false), 2000);
+  };
+
+  const handleAddTagSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTagInput.trim() || !onAddCustomTag) return;
+    onAddCustomTag(newTagInput.trim().toLowerCase());
+    setNewTagInput('');
   };
 
   return (
@@ -267,6 +298,105 @@ export const ImageInfoModal: React.FC<ImageInfoModalProps> = ({
                       <p className="text-[10px] text-slate-400">Dynamic shadow layer active in history</p>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* AI Product Taxonomy & Suggested Tags */}
+              <div className="bg-slate-950 border border-slate-800/90 rounded-2xl p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Tag className="w-4 h-4 text-indigo-400" />
+                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                      AI Suggested Product Tags & Taxonomy
+                    </h3>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    {onReanalyzeTags && (
+                      <button
+                        type="button"
+                        onClick={onReanalyzeTags}
+                        disabled={isAnalyzingTags}
+                        className="text-[11px] font-semibold text-indigo-300 hover:text-white bg-indigo-500/10 hover:bg-indigo-500/20 px-2.5 py-1 rounded-lg border border-indigo-500/30 transition flex items-center space-x-1.5 disabled:opacity-50"
+                      >
+                        <RotateCcw className={`w-3 h-3 ${isAnalyzingTags ? 'animate-spin' : ''}`} />
+                        <span>{isAnalyzingTags ? 'Analyzing...' : 'Re-Analyze AI Tags'}</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between text-xs bg-slate-900/80 p-2.5 rounded-xl border border-slate-800">
+                  <span className="text-slate-400 font-medium">Primary AI Catalog Category:</span>
+                  <span className="font-bold text-white px-2.5 py-0.5 bg-indigo-600/30 border border-indigo-500/40 rounded-full text-[11px]">
+                    {primaryCategory}
+                  </span>
+                </div>
+
+                {/* Tags Badges */}
+                <div className="space-y-2">
+                  <p className="text-[11px] text-slate-400">Auto-detected product tags & composition keywords:</p>
+                  
+                  {isAnalyzingTags ? (
+                    <div className="py-4 text-center text-xs text-indigo-300 flex items-center justify-center space-x-2 bg-slate-900/40 rounded-xl">
+                      <div className="w-4 h-4 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
+                      <span>Gemini 2.5 Flash is classifying image attributes...</span>
+                    </div>
+                  ) : productTags.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {productTags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center space-x-1 px-2.5 py-1 bg-slate-900 hover:bg-slate-850 text-indigo-300 font-mono text-xs font-semibold rounded-lg border border-indigo-500/30 group shadow-sm transition"
+                        >
+                          <span>#{tag}</span>
+                          {onRemoveTag && (
+                            <button
+                              type="button"
+                              onClick={() => onRemoveTag(tag)}
+                              className="text-slate-500 hover:text-rose-400 transition ml-0.5"
+                              title="Remove tag"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          )}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-500 italic">No product tags generated yet.</p>
+                  )}
+                </div>
+
+                {/* Add Custom Tag Form & Copy Action */}
+                <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                  <form onSubmit={handleAddTagSubmit} className="flex items-center space-x-1.5 flex-1">
+                    <input
+                      type="text"
+                      value={newTagInput}
+                      onChange={(e) => setNewTagInput(e.target.value)}
+                      placeholder="Add custom tag (e.g., 'macro', 'apparel')..."
+                      className="bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 flex-1"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newTagInput.trim()}
+                      className="p-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white rounded-xl transition"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+
+                  {productTags.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleCopyTags}
+                      className="px-3 py-1 bg-slate-900 hover:bg-slate-850 border border-slate-800 text-slate-300 hover:text-white text-xs font-semibold rounded-xl transition flex items-center space-x-1.5 shrink-0"
+                    >
+                      {copiedTags ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+                      <span>{copiedTags ? 'Copied Tags' : 'Copy #Hashtags'}</span>
+                    </button>
+                  )}
                 </div>
               </div>
 

@@ -21,6 +21,7 @@ import {
   SavedSessionData
 } from './types';
 import { exportEditedPhoto, exportAllHistoryAsZip } from './utils/canvasExport';
+import { analyzeProductImageTags } from './utils/tagAnalysis';
 import { Sparkles, Sliders, Upload, ShieldCheck } from 'lucide-react';
 
 const INITIAL_ADJUSTMENTS: ImageAdjustments = {
@@ -80,6 +81,45 @@ export default function App() {
   const [isImageInfoModalOpen, setIsImageInfoModalOpen] = useState<boolean>(false);
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // AI Product Tags & Taxonomy State
+  const [productTags, setProductTags] = useState<string[]>([]);
+  const [primaryCategory, setPrimaryCategory] = useState<string>('Product Catalog');
+  const [isAnalyzingTags, setIsAnalyzingTags] = useState<boolean>(false);
+
+  // Trigger AI Tag Analysis for current active photo
+  const triggerTagAnalysis = async (imageUrl: string, filename: string = '') => {
+    if (!imageUrl) return;
+    setIsAnalyzingTags(true);
+    try {
+      const res = await analyzeProductImageTags(imageUrl, filename);
+      setProductTags(res.tags);
+      setPrimaryCategory(res.primaryCategory);
+    } catch (err) {
+      console.error('Failed AI tag analysis:', err);
+    } finally {
+      setIsAnalyzingTags(false);
+    }
+  };
+
+  // Initial tag analysis for default active photo on mount
+  useEffect(() => {
+    if (SAMPLE_PRODUCTS.length > 0) {
+      triggerTagAnalysis(SAMPLE_PRODUCTS[0].url, SAMPLE_PRODUCTS[0].name);
+    }
+  }, []);
+
+  // Tag Management Handlers
+  const handleAddCustomTag = (tag: string) => {
+    const clean = tag.toLowerCase().trim();
+    if (clean && !productTags.includes(clean)) {
+      setProductTags(prev => [...prev, clean]);
+    }
+  };
+
+  const handleRemoveTag = (tag: string) => {
+    setProductTags(prev => prev.filter(t => t !== tag));
+  };
 
   // Auto-Save & Restore Session State
   const [pendingSession, setPendingSession] = useState<SavedSessionData | null>(null);
@@ -545,6 +585,8 @@ export default function App() {
         setBackground(INITIAL_BG);
         setShadow(INITIAL_SHADOW);
         setWatermark(INITIAL_WATERMARK);
+        // Trigger AI Tag Suggestions
+        triggerTagAnalysis(url, file.name);
       }
     };
     reader.readAsDataURL(file);
@@ -568,6 +610,8 @@ export default function App() {
     setBackground(INITIAL_BG);
     setShadow(INITIAL_SHADOW);
     setWatermark(INITIAL_WATERMARK);
+    // Trigger AI Tag Suggestions
+    triggerTagAnalysis(sample.url, sample.name);
   };
 
   // Reset to original upload
@@ -753,6 +797,12 @@ export default function App() {
         currentStep={currentStep}
         currentUrl={currentStep.imageUrl}
         totalHistorySteps={history.length}
+        productTags={productTags}
+        primaryCategory={primaryCategory}
+        isAnalyzingTags={isAnalyzingTags}
+        onReanalyzeTags={() => currentStep?.imageUrl && triggerTagAnalysis(currentStep.imageUrl, currentStep.label)}
+        onAddCustomTag={handleAddCustomTag}
+        onRemoveTag={handleRemoveTag}
       />
 
       {/* Guided Tour Overlay */}
