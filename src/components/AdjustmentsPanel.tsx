@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Sliders,
   Sun,
@@ -18,9 +18,16 @@ import {
   Stamp,
   Type,
   Grid,
-  Maximize2
+  Maximize2,
+  Crop,
+  Target,
+  ShoppingBag,
+  Share2,
+  Monitor,
+  Check
 } from 'lucide-react';
 import { ImageAdjustments, BackgroundSettings, ShadowSettings, WatermarkSettings, WatermarkPosition, LightingAnalysisResult } from '../types';
+import { CROP_ASPECT_PRESETS, CropAspectPreset, generateSmartCrop } from '../utils/smartCrop';
 
 interface AdjustmentsPanelProps {
   adjustments: ImageAdjustments;
@@ -36,6 +43,8 @@ interface AdjustmentsPanelProps {
   isAnalyzingLighting: boolean;
   lastLightingAnalysis: LightingAnalysisResult | null;
   onApplyRecommendedPrompt: (prompt: string) => void;
+  currentImageUrl?: string;
+  onApplyCrop?: (croppedUrl: string, label: string) => void;
   canUndoTool?: boolean;
   canRedoTool?: boolean;
   onUndoTool?: () => void;
@@ -56,11 +65,17 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
   isAnalyzingLighting,
   lastLightingAnalysis,
   onApplyRecommendedPrompt,
+  currentImageUrl,
+  onApplyCrop,
   canUndoTool = false,
   canRedoTool = false,
   onUndoTool,
   onRedoTool,
 }) => {
+  const [selectedPreset, setSelectedPreset] = useState<CropAspectPreset>(CROP_ASPECT_PRESETS[0]);
+  const [autoCenterProduct, setAutoCenterProduct] = useState<boolean>(true);
+  const [isCropping, setIsCropping] = useState<boolean>(false);
+  const [cropSuccessMessage, setCropSuccessMessage] = useState<string | null>(null);
 
   const handleAdjustmentChange = (key: keyof ImageAdjustments, value: number) => {
     onChangeAdjustments({
@@ -81,6 +96,25 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
       ...watermark,
       [key]: value,
     });
+  };
+
+  const handleExecuteCrop = async () => {
+    if (!currentImageUrl || !onApplyCrop) return;
+    setIsCropping(true);
+    try {
+      const croppedUrl = await generateSmartCrop(
+        currentImageUrl,
+        selectedPreset.ratio,
+        autoCenterProduct
+      );
+      onApplyCrop(croppedUrl, `Smart Crop ${selectedPreset.aspectStr}`);
+      setCropSuccessMessage(`Cropped to ${selectedPreset.name}!`);
+      setTimeout(() => setCropSuccessMessage(null), 2500);
+    } catch (err) {
+      console.error('Smart Crop failed:', err);
+    } finally {
+      setIsCropping(false);
+    }
   };
 
   const watermarkPresets = ['CLEANSNAP AI', 'OFFICIAL BRAND', 'CONFIDENTIAL', 'SAMPLE ONLY'];
@@ -443,6 +477,97 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
           />
         </div>
 
+      </div>
+
+      {/* Smart Crop & Aspect Ratios Section */}
+      <div className="space-y-3 pt-3 border-t border-slate-800">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <Crop className="w-4 h-4 text-indigo-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Smart Aspect Ratio Crop
+            </h3>
+          </div>
+          <span className="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+            Auto-Framing
+          </span>
+        </div>
+
+        <div className="bg-slate-950/60 p-3.5 rounded-xl border border-slate-800 space-y-3">
+          
+          {/* Preset Buttons Grid */}
+          <div className="grid grid-cols-3 gap-1.5">
+            {CROP_ASPECT_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => setSelectedPreset(preset)}
+                className={`py-2 px-2.5 rounded-xl text-left border transition relative flex flex-col justify-between ${
+                  selectedPreset.id === preset.id
+                    ? 'bg-indigo-600/20 border-indigo-500 text-white shadow-sm ring-1 ring-indigo-500/40'
+                    : 'bg-slate-900 border-slate-800/80 text-slate-400 hover:bg-slate-850 hover:text-slate-200'
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold font-mono text-indigo-300">{preset.aspectStr}</span>
+                  {selectedPreset.id === preset.id && (
+                    <Check className="w-3 h-3 text-indigo-400" />
+                  )}
+                </div>
+                <span className="text-[10px] font-semibold text-slate-300 mt-1 truncate">{preset.name}</span>
+                <span className="text-[9px] text-slate-500 truncate">{preset.category}</span>
+              </button>
+            ))}
+          </div>
+
+          <p className="text-[11px] text-slate-400 italic bg-slate-900/60 p-2 rounded-lg border border-slate-800/50">
+            {selectedPreset.description}
+          </p>
+
+          {/* Center of Mass Framing Checkbox */}
+          <div className="flex items-center justify-between pt-1">
+            <label className="flex items-center space-x-2 cursor-pointer text-xs text-slate-300 font-medium">
+              <input
+                type="checkbox"
+                checked={autoCenterProduct}
+                onChange={(e) => setAutoCenterProduct(e.target.checked)}
+                className="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500"
+              />
+              <Target className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Center of Mass Auto-Focus</span>
+            </label>
+            <span className="text-[10px] text-slate-500 font-mono">
+              {autoCenterProduct ? 'Subject Centered' : 'Geometric Center'}
+            </span>
+          </div>
+
+          {/* Execute Crop Action Button */}
+          <button
+            type="button"
+            onClick={handleExecuteCrop}
+            disabled={isCropping || !currentImageUrl}
+            className="w-full py-2 px-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 disabled:opacity-50 text-white text-xs font-bold rounded-xl shadow transition flex items-center justify-center space-x-2"
+          >
+            {isCropping ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <span>Computing Product Center & Crop...</span>
+              </>
+            ) : (
+              <>
+                <Crop className="w-3.5 h-3.5" />
+                <span>Apply {selectedPreset.aspectStr} Smart Crop</span>
+              </>
+            )}
+          </button>
+
+          {cropSuccessMessage && (
+            <p className="text-[11px] font-semibold text-emerald-400 text-center animate-in fade-in duration-200">
+              ✓ {cropSuccessMessage}
+            </p>
+          )}
+
+        </div>
       </div>
 
       {/* Watermark Branding Section */}

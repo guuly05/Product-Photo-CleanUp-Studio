@@ -300,6 +300,26 @@ export default function App() {
     setHistoryIndex(newHistory.length - 1);
   };
 
+  // Smart Crop Apply Handler
+  const handleSmartCropApply = (croppedImageUrl: string, label: string) => {
+    const newStep: EditHistoryItem = {
+      id: `crop-${Date.now()}`,
+      timestamp: Date.now(),
+      imageUrl: croppedImageUrl,
+      prompt: 'Smart Aspect Ratio Crop auto-framing',
+      label: label || 'Smart Crop',
+      type: 'adjustment',
+      adjustments: { ...adjustments },
+      background: { ...background },
+      shadow: { ...shadow },
+      watermark: { ...watermark },
+    };
+
+    const newHistory = [...history.slice(0, historyIndex + 1), newStep];
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
   // Export all history items as ZIP
   const handleExportAllZip = async () => {
     setIsExportingZip(true);
@@ -576,6 +596,8 @@ export default function App() {
                 isAnalyzingLighting={isAnalyzingLighting}
                 lastLightingAnalysis={lastLightingAnalysis}
                 onApplyRecommendedPrompt={handleSubmitPrompt}
+                currentImageUrl={currentStep.imageUrl}
+                onApplyCrop={handleSmartCropApply}
                 canUndoTool={canUndoTool}
                 canRedoTool={canRedoTool}
                 onUndoTool={handleToolUndo}
