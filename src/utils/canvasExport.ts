@@ -149,12 +149,53 @@ export async function exportEditedPhoto(
   URL.revokeObjectURL(dataUrl);
 }
 
+export function generateFilenameFromTemplate(
+  template: string,
+  index: number,
+  label: string,
+  extension: string = 'png'
+): string {
+  if (!template || !template.trim()) {
+    const sanitizedLabel = (label || `step-${index + 1}`)
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
+      .replace(/_+/g, '_')
+      .toLowerCase();
+    return `${String(index + 1).padStart(2, '0')}_${sanitizedLabel}.${extension}`;
+  }
+
+  const sanitizedLabel = (label || `step-${index + 1}`)
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .toLowerCase();
+
+  const now = new Date();
+  const dateStr = now.toISOString().slice(0, 10);
+  const timeStr = String(Date.now());
+
+  let rendered = template.trim();
+  rendered = rendered.replace(/\{index\}/gi, String(index + 1));
+  rendered = rendered.replace(/\{step\}/gi, String(index + 1));
+  rendered = rendered.replace(/\{label\}/gi, sanitizedLabel);
+  rendered = rendered.replace(/\{timestamp\}/gi, timeStr);
+  rendered = rendered.replace(/\{date\}/gi, dateStr);
+
+  // If template does not contain index or step or label variable, append index to avoid file name collisions
+  const hasIndexOrLabel = /\{index\}|\{step\}|\{label\}/i.test(template);
+  if (!hasIndexOrLabel) {
+    rendered = `${rendered}_${index + 1}`;
+  }
+
+  const clean = rendered.replace(/[^a-zA-Z0-9_.-]/g, '_').replace(/_+/g, '_');
+  return `${clean}.${extension}`;
+}
+
 export async function exportAllHistoryAsZip(
   history: EditHistoryItem[],
   currentAdjustments: ImageAdjustments,
   currentBackground: BackgroundSettings,
   currentShadow: ShadowSettings,
-  currentWatermark?: WatermarkSettings
+  currentWatermark?: WatermarkSettings,
+  filenameTemplate?: string
 ): Promise<void> {
   const zip = new JSZip();
 
@@ -176,12 +217,12 @@ export async function exportAllHistoryAsZip(
         false
       );
 
-      const sanitizedLabel = (item.label || `step-${i + 1}`)
-        .replace(/[^a-zA-Z0-9_-]/g, '_')
-        .replace(/_+/g, '_')
-        .toLowerCase();
-
-      const fileName = `${String(i + 1).padStart(2, '0')}_${sanitizedLabel}.png`;
+      const fileName = generateFilenameFromTemplate(
+        filenameTemplate || '',
+        i,
+        item.label || `step-${i + 1}`,
+        'png'
+      );
       zip.file(fileName, blob);
     } catch (err) {
       console.error(`Failed rendering history step ${i + 1}:`, err);
