@@ -16,7 +16,9 @@ import {
   Settings,
   SlidersHorizontal,
   LogOut,
-  ShieldCheck
+  ShieldCheck,
+  CloudCheck,
+  Save
 } from 'lucide-react';
 
 interface HeaderProps {
@@ -34,6 +36,7 @@ interface HeaderProps {
   hasEditedImage: boolean;
   historyCount: number;
   onStartTour: () => void;
+  lastAutoSavedAt?: number | null;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -51,6 +54,7 @@ export const Header: React.FC<HeaderProps> = ({
   hasEditedImage,
   historyCount,
   onStartTour,
+  lastAutoSavedAt,
 }) => {
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -85,12 +89,22 @@ export const Header: React.FC<HeaderProps> = ({
                 <span className="text-[10px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
                   AI CleanUp
                 </span>
+                {lastAutoSavedAt && (
+                  <span
+                    className="hidden lg:inline-flex items-center space-x-1 text-[10px] text-emerald-400 font-mono bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full animate-in fade-in"
+                    title={`Auto-saved session to localStorage at ${new Date(lastAutoSavedAt).toLocaleTimeString()}`}
+                  >
+                    <CloudCheck className="w-3 h-3 text-emerald-400" />
+                    <span>Auto-Saved {new Date(lastAutoSavedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </span>
+                )}
               </div>
               <p className="text-xs text-slate-400 hidden sm:block">
                 Remove backgrounds, clean blemishes & set backdrop with text prompts
               </p>
             </div>
           </div>
+
 
           {/* Vertical Divider */}
           <div className="h-6 w-px bg-slate-800 hidden lg:block" />

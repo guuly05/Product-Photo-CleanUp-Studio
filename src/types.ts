@@ -77,3 +77,14 @@ export interface LightingAnalysisResult {
   lightingAssessment: string;
   recommendedPrompt: string;
 }
+
+export interface SavedSessionData {
+  savedAt: number;
+  history: EditHistoryItem[];
+  historyIndex: number;
+  adjustments: ImageAdjustments;
+  background: BackgroundSettings;
+  shadow: ShadowSettings;
+  watermark: WatermarkSettings;
+}
+

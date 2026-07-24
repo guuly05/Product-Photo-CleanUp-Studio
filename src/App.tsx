@@ -8,6 +8,7 @@ import { SamplePickerModal } from './components/SamplePickerModal';
 import { BatchProcessorModal } from './components/BatchProcessorModal';
 import { ImageInfoModal } from './components/ImageInfoModal';
 import { GuidedTour } from './components/GuidedTour';
+import { RestoreSessionModal } from './components/RestoreSessionModal';
 import { SAMPLE_PRODUCTS } from './data/samples';
 import {
   EditHistoryItem,
@@ -16,7 +17,8 @@ import {
   ShadowSettings,
   WatermarkSettings,
   SampleProduct,
-  LightingAnalysisResult
+  LightingAnalysisResult,
+  SavedSessionData
 } from './types';
 import { exportEditedPhoto, exportAllHistoryAsZip } from './utils/canvasExport';
 import { Sparkles, Sliders, Upload, ShieldCheck } from 'lucide-react';
@@ -79,6 +81,25 @@ export default function App() {
   const [isTourOpen, setIsTourOpen] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Auto-Save & Restore Session State
+  const [pendingSession, setPendingSession] = useState<SavedSessionData | null>(null);
+  const [lastAutoSavedAt, setLastAutoSavedAt] = useState<number | null>(null);
+
+  // Check for previous un-exported session on initial load
+  useEffect(() => {
+    try {
+      const rawSession = localStorage.getItem('product_studio_active_session');
+      if (rawSession) {
+        const parsed: SavedSessionData = JSON.parse(rawSession);
+        if (parsed && Array.isArray(parsed.history) && parsed.history.length > 0) {
+          setPendingSession(parsed);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to parse saved studio session from localStorage:', err);
+    }
+  }, []);
+
   // Auto-trigger tour on first visit
   useEffect(() => {
     const hasSeenTour = localStorage.getItem('hasSeenPhotoStudioTour');
@@ -101,6 +122,66 @@ export default function App() {
   const [background, setBackground] = useState<BackgroundSettings>(INITIAL_BG);
   const [shadow, setShadow] = useState<ShadowSettings>(INITIAL_SHADOW);
   const [watermark, setWatermark] = useState<WatermarkSettings>(INITIAL_WATERMARK);
+
+  // 30-Second Auto-Save Interval to localStorage
+  useEffect(() => {
+    const saveSession = () => {
+      if (!history || history.length === 0) return;
+
+      const sessionData: SavedSessionData = {
+        savedAt: Date.now(),
+        history,
+        historyIndex,
+        adjustments,
+        background,
+        shadow,
+        watermark,
+      };
+
+      try {
+        localStorage.setItem('product_studio_active_session', JSON.stringify(sessionData));
+        setLastAutoSavedAt(Date.now());
+      } catch (err) {
+        console.warn('Auto-save session to localStorage failed:', err);
+      }
+    };
+
+    // Run initial auto-save after 3 seconds, then every 30 seconds
+    const initialTimeout = setTimeout(saveSession, 3000);
+    const interval = setInterval(saveSession, 30000);
+
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, [history, historyIndex, adjustments, background, shadow, watermark]);
+
+  // Session Restore / Discard Action Handlers
+  const handleRestoreSession = () => {
+    if (!pendingSession) return;
+    setHistory(pendingSession.history);
+    setHistoryIndex(pendingSession.historyIndex || 0);
+    setAdjustments(pendingSession.adjustments || INITIAL_ADJUSTMENTS);
+    setBackground(pendingSession.background || INITIAL_BG);
+    setShadow(pendingSession.shadow || INITIAL_SHADOW);
+    setWatermark(pendingSession.watermark || INITIAL_WATERMARK);
+    setToolHistory([
+      {
+        adjustments: pendingSession.adjustments || INITIAL_ADJUSTMENTS,
+        background: pendingSession.background || INITIAL_BG,
+        shadow: pendingSession.shadow || INITIAL_SHADOW,
+        watermark: pendingSession.watermark || INITIAL_WATERMARK,
+      },
+    ]);
+    setToolPointer(0);
+    setLastAutoSavedAt(pendingSession.savedAt);
+    setPendingSession(null);
+  };
+
+  const handleDiscardSession = () => {
+    localStorage.removeItem('product_studio_active_session');
+    setPendingSession(null);
+  };
 
   // Tool Undo / Redo Stack State
   interface ToolSnapshot {
@@ -545,6 +626,7 @@ export default function App() {
         hasEditedImage={history.length > 1}
         historyCount={history.length}
         onStartTour={() => setIsTourOpen(true)}
+        lastAutoSavedAt={lastAutoSavedAt}
       />
 
       {/* Main Workspace Layout */}
@@ -678,6 +760,15 @@ export default function App() {
         isOpen={isTourOpen}
         onClose={handleCloseTour}
       />
+
+      {/* Restore Unsaved Session Prompt Modal */}
+      {pendingSession && (
+        <RestoreSessionModal
+          sessionData={pendingSession}
+          onRestore={handleRestoreSession}
+          onDiscard={handleDiscardSession}
+        />
+      )}
 
     </div>
   );
