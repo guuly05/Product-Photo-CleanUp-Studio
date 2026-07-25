@@ -12,7 +12,7 @@ import {
   Zap,
   Info,
   FolderArchive,
-  User,
+  User as UserIcon,
   Settings,
   SlidersHorizontal,
   LogOut,
@@ -27,6 +27,7 @@ import {
   Trophy
 } from 'lucide-react';
 import { WorkspaceStats, formatTimeSaved, calculateUserLevelAndXp } from '../utils/workspaceStats';
+import type { User as FirebaseUser } from '../lib/firebase';
 
 interface HeaderProps {
   onOpenSamples: () => void;
@@ -48,6 +49,9 @@ interface HeaderProps {
   historyCount: number;
   onStartTour: () => void;
   lastAutoSavedAt?: number | null;
+  user?: FirebaseUser | null;
+  onSignInWithGoogle?: () => void;
+  onSignOut?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -70,6 +74,9 @@ export const Header: React.FC<HeaderProps> = ({
   historyCount,
   onStartTour,
   lastAutoSavedAt,
+  user = null,
+  onSignInWithGoogle,
+  onSignOut,
 }) => {
   const [downloadMenuOpen, setDownloadMenuOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
@@ -142,32 +149,59 @@ export const Header: React.FC<HeaderProps> = ({
           {/* Vertical Divider */}
           <div className="h-6 w-px bg-slate-800 hidden lg:block" />
 
-          {/* User Profile Dropdown Menu */}
+          {/* User Profile / Auth State */}
           <div className="relative" ref={profileMenuRef}>
-            <button
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              className="flex items-center space-x-2 bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl px-2.5 py-1.5 transition text-left focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
-              title="User Account & Workspace Settings"
-            >
-              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                GM
-              </div>
-              <div className="hidden xl:block">
-                <p className="text-xs font-semibold text-slate-200 leading-none">Guuleed Maxamuud</p>
-                <p className="text-[10px] text-slate-400 leading-tight mt-0.5">Pro Member</p>
-              </div>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
-            </button>
+            {user ? (
+              <button
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="flex items-center space-x-2 bg-slate-850 hover:bg-slate-800 border border-slate-800 hover:border-slate-700 rounded-xl px-2.5 py-1.5 transition text-left focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+                title="User Account & Workspace Settings"
+              >
+                {user.photoURL ? (
+                  <img
+                    src={user.photoURL}
+                    alt={user.displayName || 'User'}
+                    className="w-7 h-7 rounded-lg object-cover border border-indigo-500/40 shadow-sm"
+                    referrerPolicy="no-referrer"
+                  />
+                ) : (
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                    {user.displayName ? user.displayName.slice(0, 2).toUpperCase() : 'US'}
+                  </div>
+                )}
+                <div className="hidden xl:block">
+                  <p className="text-xs font-semibold text-slate-200 leading-none truncate max-w-[110px]">
+                    {user.displayName || user.email?.split('@')[0] || 'Studio User'}
+                  </p>
+                  <p className="text-[10px] text-emerald-400 font-mono leading-tight mt-0.5 flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Firebase Auth</span>
+                  </p>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${profileMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+            ) : (
+              <button
+                onClick={onSignInWithGoogle}
+                className="flex items-center space-x-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold text-xs px-3 py-1.5 rounded-xl shadow-lg shadow-indigo-500/25 transition transform hover:scale-105 active:scale-95"
+                title="Sign in with Google to sync stats & photo edits across devices"
+              >
+                <svg className="w-3.5 h-3.5 fill-current shrink-0" viewBox="0 0 24 24">
+                  <path d="M12.24 10.285V13.4h6.887c-.58 2.319-2.755 4.004-5.647 4.004-3.417 0-6.19-2.772-6.19-6.19 0-3.417 2.773-6.19 6.19-6.19 1.54 0 2.946.565 4.032 1.498l2.457-2.457C18.47 2.705 15.545 1.75 12.24 1.75 6.58 1.75 2 6.33 2 11.99s4.58 10.24 10.24 10.24c5.918 0 9.84-4.16 9.84-10.015 0-.67-.07-1.32-.19-1.935H12.24z" />
+                </svg>
+                <span>Sign In with Google</span>
+              </button>
+            )}
 
             {/* Profile Dropdown Popup */}
-            {profileMenuOpen && (
+            {user && profileMenuOpen && (
               <div className="absolute left-0 mt-2 w-64 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl py-2 z-50 text-slate-200 animate-in fade-in slide-in-from-top-2 duration-150">
                 <div className="px-3.5 py-2.5 border-b border-slate-800/80 bg-slate-950/40 rounded-t-2xl">
                   <div className="flex items-center space-x-2">
                     <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                    <div>
-                      <p className="text-xs font-bold text-white">Guuleed Maxamuud</p>
-                      <p className="text-[10px] text-slate-400 font-mono truncate">guuleedmaxamuud40@gmail.com</p>
+                    <div className="overflow-hidden">
+                      <p className="text-xs font-bold text-white truncate">{user.displayName || 'Studio Creator'}</p>
+                      <p className="text-[10px] text-slate-400 font-mono truncate">{user.email}</p>
                     </div>
                   </div>
                 </div>
@@ -215,7 +249,7 @@ export const Header: React.FC<HeaderProps> = ({
                       <span className="font-semibold text-purple-200">Workspace Stats</span>
                     </span>
                     <span className="text-[10px] font-bold text-purple-400 bg-purple-500/20 px-1.5 py-0.5 rounded font-mono">
-                      Gamified
+                      Firestore
                     </span>
                   </button>
 
@@ -238,11 +272,14 @@ export const Header: React.FC<HeaderProps> = ({
 
                 <div className="border-t border-slate-800/80 pt-1 mt-1">
                   <button
-                    onClick={() => setProfileMenuOpen(false)}
+                    onClick={() => {
+                      setProfileMenuOpen(false);
+                      if (onSignOut) onSignOut();
+                    }}
                     className="w-full px-3.5 py-2 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-950/30 flex items-center space-x-2.5 transition text-left"
                   >
                     <LogOut className="w-4 h-4 text-rose-400" />
-                    <span>Logout</span>
+                    <span>Sign Out</span>
                   </button>
                 </div>
               </div>

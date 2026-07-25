@@ -1,0 +1,48 @@
+{
+  "entities": {
+    "users": {
+      "title": "Users",
+      "description": "User profiles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "lastLoginAt": { "type": "string" }
+      },
+      "required": ["uid", "email"]
+    },
+    "workspaceStats": {
+      "title": "Workspace Stats",
+      "description": "Gamified stats and productivity metrics for user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "totalImagesEdited": { "type": "number" },
+        "timeSavedMinutes": { "type": "number" },
+        "batchJobsCompleted": { "type": "number" },
+        "batchImagesProcessed": { "type": "number" },
+        "aiPromptsRun": { "type": "number" },
+        "streakDays": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId"]
+    },
+    "savedSessions": {
+      "title": "Saved Studio Sessions",
+      "description": "Saved photo editing projects and history",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "currentUrl": { "type": "string" },
+        "originalUrl": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId"]
+    }
+  }
+}

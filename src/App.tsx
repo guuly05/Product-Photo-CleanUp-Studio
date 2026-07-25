@@ -29,6 +29,17 @@ import {
   recordImageEditStats,
   recordBatchJobStats
 } from './utils/workspaceStats';
+import {
+  auth,
+  googleProvider,
+  signInWithPopup,
+  firebaseSignOut,
+  onAuthStateChanged,
+  syncUserProfile,
+  saveUserWorkspaceStats,
+  subscribeToWorkspaceStats,
+  User
+} from './lib/firebase';
 import { Sparkles, Sliders, Upload, ShieldCheck } from 'lucide-react';
 
 const INITIAL_ADJUSTMENTS: ImageAdjustments = {
@@ -90,6 +101,62 @@ export default function App() {
   const [isStatsModalOpen, setIsStatsModalOpen] = useState<boolean>(false);
   const [workspaceStats, setWorkspaceStats] = useState<WorkspaceStats>(getWorkspaceStats());
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Firebase Auth & Firestore State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        await syncUserProfile(user);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Subscribe to user workspace stats in Firestore
+  useEffect(() => {
+    if (!currentUser?.uid) return;
+    const unsub = subscribeToWorkspaceStats(currentUser.uid, (remoteStats) => {
+      if (remoteStats) {
+        setWorkspaceStats((prev) => ({
+          ...prev,
+          ...remoteStats,
+        }));
+      }
+    });
+    return () => unsub();
+  }, [currentUser]);
+
+  // Persist workspace stats updates to Firestore
+  useEffect(() => {
+    if (currentUser?.uid && workspaceStats) {
+      saveUserWorkspaceStats(currentUser.uid, workspaceStats);
+    }
+  }, [workspaceStats, currentUser]);
+
+  const handleSignInWithGoogle = async () => {
+    try {
+      const res = await signInWithPopup(auth, googleProvider);
+      if (res.user) {
+        await syncUserProfile(res.user);
+      }
+    } catch (err: any) {
+      console.error('Google Sign In Error:', err);
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setErrorMessage(err.message || 'Failed to sign in with Google');
+      }
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await firebaseSignOut(auth);
+    } catch (err: any) {
+      console.error('Sign Out Error:', err);
+    }
+  };
 
   // AI Product Tags & Taxonomy State
   const [productTags, setProductTags] = useState<string[]>([]);
@@ -724,6 +791,9 @@ export default function App() {
         historyCount={history.length}
         onStartTour={() => setIsTourOpen(true)}
         lastAutoSavedAt={lastAutoSavedAt}
+        user={currentUser}
+        onSignInWithGoogle={handleSignInWithGoogle}
+        onSignOut={handleSignOut}
       />
 
       {/* Main Workspace Layout */}
