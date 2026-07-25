@@ -63,6 +63,25 @@ export interface PresetInstruction {
   category: 'background' | 'cleanup' | 'ecommerce' | 'aesthetic';
 }
 
+export interface LightSourcePoint {
+  id: string;
+  name: string; // e.g. "Primary Key Light", "Soft Fill Diffuser", "Rim Light"
+  type: 'key' | 'fill' | 'rim' | 'ambient' | 'glare';
+  xPct: number; // 0 to 100
+  yPct: number; // 0 to 100
+  intensityPct: number; // 0 to 100
+  colorTempK?: number; // e.g. 5600
+  description: string;
+}
+
+export interface LuminanceHotspot {
+  xPct: number;
+  yPct: number;
+  radiusPct: number;
+  intensity: number;
+  label: string;
+}
+
 export interface LightingAnalysisResult {
   brightness: number; // -50 to 50
   contrast: number;   // -50 to 50
@@ -76,6 +95,12 @@ export interface LightingAnalysisResult {
   suggestedBackdropColor: string;
   lightingAssessment: string;
   recommendedPrompt: string;
+  lightSources?: LightSourcePoint[];
+  luminanceHotspots?: LuminanceHotspot[];
+  keyLightAngleDeg?: number;
+  overallExposureEV?: string;
+  uniformityScore?: number;
+  glareRisk?: 'Low' | 'Medium' | 'High';
 }
 
 export interface SavedSessionData {

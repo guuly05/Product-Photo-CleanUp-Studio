@@ -360,6 +360,7 @@ export default function App() {
   // AI Lighting Analysis state
   const [isAnalyzingLighting, setIsAnalyzingLighting] = useState<boolean>(false);
   const [lastLightingAnalysis, setLastLightingAnalysis] = useState<LightingAnalysisResult | null>(null);
+  const [isHeatmapVisible, setIsHeatmapVisible] = useState<boolean>(false);
   const [isExportingZip, setIsExportingZip] = useState<boolean>(false);
 
   const currentStep = history[historyIndex] || history[0];
@@ -489,6 +490,7 @@ export default function App() {
 
       const analysis: LightingAnalysisResult = data.analysis;
       setLastLightingAnalysis(analysis);
+      setIsHeatmapVisible(true);
 
       // Auto apply suggested adjustments
       if (typeof analysis.brightness === 'number') {
@@ -744,6 +746,9 @@ export default function App() {
               activePrompt={activePromptText}
               onSmartEraserApply={handleSmartEraserApply}
               onOpenImageInfo={() => setIsImageInfoModalOpen(true)}
+              lightingAnalysis={lastLightingAnalysis}
+              isHeatmapVisible={isHeatmapVisible}
+              onToggleHeatmap={() => setIsHeatmapVisible(prev => !prev)}
             />
 
             {/* History Steps Bar under Canvas */}
@@ -779,6 +784,8 @@ export default function App() {
                 canRedoTool={canRedoTool}
                 onUndoTool={handleToolUndo}
                 onRedoTool={handleToolRedo}
+                isHeatmapVisible={isHeatmapVisible}
+                onToggleHeatmap={() => setIsHeatmapVisible(prev => !prev)}
               />
             </div>
           )}

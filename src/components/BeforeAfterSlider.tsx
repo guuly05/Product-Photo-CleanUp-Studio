@@ -14,8 +14,14 @@ import {
   X,
   Sparkles,
   FileText,
+  Sun,
+  Flame,
+  Layers,
+  Sliders,
+  Compass
 } from 'lucide-react';
-import { ImageAdjustments, BackgroundSettings, ShadowSettings, WatermarkSettings } from '../types';
+import { ImageAdjustments, BackgroundSettings, ShadowSettings, WatermarkSettings, LightingAnalysisResult } from '../types';
+import { LightingHeatmapOverlay } from './LightingHeatmapOverlay';
 
 interface BeforeAfterSliderProps {
   originalUrl: string;
@@ -29,6 +35,9 @@ interface BeforeAfterSliderProps {
   activePrompt?: string;
   onSmartEraserApply?: (newImageUrl: string, label: string) => void;
   onOpenImageInfo?: () => void;
+  lightingAnalysis?: LightingAnalysisResult | null;
+  isHeatmapVisible?: boolean;
+  onToggleHeatmap?: () => void;
 }
 
 export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
@@ -43,10 +52,16 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
   activePrompt,
   onSmartEraserApply,
   onOpenImageInfo,
+  lightingAnalysis = null,
+  isHeatmapVisible = false,
+  onToggleHeatmap,
 }) => {
   const [sliderPosition, setSliderPosition] = useState<number>(50); // percentage 0 to 100
   const [zoom, setZoom] = useState<number>(1);
   const [showGrid, setShowGrid] = useState<boolean>(false);
+  const [heatmapOpacity, setHeatmapOpacity] = useState<number>(0.75);
+  const [heatmapMode, setHeatmapMode] = useState<'luminance' | 'hotspots' | 'vectors' | 'shadows'>('luminance');
+  const [showLightMarkers, setShowLightMarkers] = useState<boolean>(true);
   const isDraggingRef = useRef<boolean>(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -335,6 +350,19 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
           </div>
         )}
 
+        {/* Lighting Analysis Heatmap Overlay */}
+        {isHeatmapVisible && (
+          <LightingHeatmapOverlay
+            imageUrl={currentUrl}
+            lightingAnalysis={lightingAnalysis}
+            isVisible={isHeatmapVisible}
+            opacity={heatmapOpacity}
+            heatmapMode={heatmapMode}
+            showMarkers={showLightMarkers}
+            onCloseOverlay={onToggleHeatmap}
+          />
+        )}
+
         {/* View mode 1: Standard Current Image View or Smart Eraser Active View */}
         {isEraserActive ? (
           <div
@@ -503,6 +531,22 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
           <span className="text-xs font-semibold hidden sm:inline">Smart Eraser</span>
         </button>
 
+        {/* Lighting Heatmap Overlay Toggle */}
+        {onToggleHeatmap && (
+          <button
+            onClick={onToggleHeatmap}
+            className={`p-1.5 rounded-lg transition flex items-center space-x-1.5 ${
+              isHeatmapVisible
+                ? 'bg-amber-500 text-slate-950 font-bold shadow-lg ring-2 ring-amber-400/50'
+                : 'hover:bg-slate-800 text-slate-400 hover:text-amber-300'
+            }`}
+            title="Toggle Interactive Lighting Heatmap Overlay"
+          >
+            <Sun className={`w-4 h-4 ${isHeatmapVisible ? 'text-slate-950 fill-slate-950' : 'text-amber-400'}`} />
+            <span className="text-xs font-semibold hidden sm:inline">Lighting Heatmap</span>
+          </button>
+        )}
+
         {/* Alignment Grid Overlay Toggle */}
         <button
           onClick={() => setShowGrid(!showGrid)}
@@ -591,6 +635,81 @@ export const BeforeAfterSlider: React.FC<BeforeAfterSliderProps> = ({
               <X className="w-4 h-4" />
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Floating Lighting Heatmap Control Bar */}
+      {isHeatmapVisible && !isEraserActive && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex flex-wrap items-center gap-2.5 bg-slate-950/90 backdrop-blur-md px-4 py-2 rounded-2xl border border-amber-500/50 text-slate-200 shadow-2xl max-w-[95%]">
+          <div className="flex items-center space-x-1.5 border-r border-slate-800 pr-3">
+            <Sun className="w-4 h-4 text-amber-400 animate-spin" style={{ animationDuration: '8s' }} />
+            <span className="text-xs font-extrabold text-amber-300 uppercase tracking-wider">Lighting Heatmap</span>
+          </div>
+
+          {/* Mode Switcher */}
+          <div className="flex items-center space-x-1 bg-slate-900 p-1 rounded-xl border border-slate-800 text-[11px]">
+            <button
+              onClick={() => setHeatmapMode('luminance')}
+              className={`px-2 py-1 rounded-lg transition font-medium ${heatmapMode === 'luminance' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
+            >
+              Luminance
+            </button>
+            <button
+              onClick={() => setHeatmapMode('hotspots')}
+              className={`px-2 py-1 rounded-lg transition font-medium ${heatmapMode === 'hotspots' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
+            >
+              Hotspots
+            </button>
+            <button
+              onClick={() => setHeatmapMode('shadows')}
+              className={`px-2 py-1 rounded-lg transition font-medium ${heatmapMode === 'shadows' ? 'bg-amber-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'}`}
+            >
+              Shadow Depth
+            </button>
+          </div>
+
+          {/* Opacity Control */}
+          <div className="hidden sm:flex items-center space-x-2 border-l border-slate-800 pl-3">
+            <span className="text-[11px] text-slate-400">Opacity:</span>
+            <input
+              type="range"
+              min="0.2"
+              max="1"
+              step="0.05"
+              value={heatmapOpacity}
+              onChange={(e) => setHeatmapOpacity(parseFloat(e.target.value))}
+              className="w-16 accent-amber-500 cursor-pointer h-1.5 bg-slate-800 rounded-lg"
+            />
+            <span className="text-[10px] font-mono text-amber-300 font-bold w-7">{Math.round(heatmapOpacity * 100)}%</span>
+          </div>
+
+          {/* Toggle Light Source Pins */}
+          <button
+            onClick={() => setShowLightMarkers(!showLightMarkers)}
+            className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold border transition ${
+              showLightMarkers ? 'bg-amber-500/20 border-amber-500/50 text-amber-300' : 'bg-slate-900 border-slate-800 text-slate-400'
+            }`}
+          >
+            {showLightMarkers ? 'Pins ON' : 'Pins OFF'}
+          </button>
+
+          {/* Legend */}
+          <div className="hidden lg:flex items-center space-x-1 text-[10px] font-mono border-l border-slate-800 pl-3">
+            <span className="text-indigo-400">Low</span>
+            <div className="w-12 h-2 rounded bg-gradient-to-r from-indigo-500 via-emerald-400 via-amber-400 to-rose-500 border border-slate-700" />
+            <span className="text-rose-400">Glare</span>
+          </div>
+
+          {/* Close Heatmap */}
+          {onToggleHeatmap && (
+            <button
+              onClick={onToggleHeatmap}
+              className="p-1 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition ml-auto"
+              title="Close Heatmap Overlay"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       )}
 

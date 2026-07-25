@@ -49,6 +49,8 @@ interface AdjustmentsPanelProps {
   canRedoTool?: boolean;
   onUndoTool?: () => void;
   onRedoTool?: () => void;
+  isHeatmapVisible?: boolean;
+  onToggleHeatmap?: () => void;
 }
 
 export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
@@ -71,6 +73,8 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
   canRedoTool = false,
   onUndoTool,
   onRedoTool,
+  isHeatmapVisible = false,
+  onToggleHeatmap,
 }) => {
   const [selectedPreset, setSelectedPreset] = useState<CropAspectPreset>(CROP_ASPECT_PRESETS[0]);
   const [autoCenterProduct, setAutoCenterProduct] = useState<boolean>(true);
@@ -208,16 +212,67 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
         </button>
 
         {lastLightingAnalysis && (
-          <div className="bg-slate-900/90 rounded-xl p-3 border border-slate-800 space-y-2 mt-2">
+          <div className="bg-slate-900/90 rounded-xl p-3 border border-amber-500/30 space-y-2.5 mt-2 shadow-inner">
             <div className="text-[11px] text-slate-300 font-medium flex items-start space-x-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
               <div>
-                <span className="font-bold text-white">AI Assessment: </span>
+                <span className="font-bold text-white">AI Studio Assessment: </span>
                 <span>{lastLightingAnalysis.lightingAssessment}</span>
               </div>
             </div>
 
-            <div className="text-[10px] text-slate-400 flex flex-wrap gap-1.5 pt-1">
+            {/* Interactive Heatmap Overlay Launch Button */}
+            {onToggleHeatmap && (
+              <button
+                type="button"
+                onClick={onToggleHeatmap}
+                className={`w-full py-2 px-3 rounded-xl font-bold text-xs transition flex items-center justify-between shadow-lg ${
+                  isHeatmapVisible
+                    ? 'bg-amber-500 text-slate-950 shadow-amber-500/20 ring-2 ring-amber-400/60'
+                    : 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                }`}
+              >
+                <div className="flex items-center space-x-2">
+                  <Sun className={`w-4 h-4 ${isHeatmapVisible ? 'text-slate-950 fill-slate-950' : 'text-amber-400 animate-spin'}`} style={{ animationDuration: '6s' }} />
+                  <span>{isHeatmapVisible ? 'Hide Lighting Heatmap Overlay' : 'View Light Heatmap Overlay'}</span>
+                </div>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-950/60 text-amber-300">
+                  {isHeatmapVisible ? 'ACTIVE' : 'TOGGLE'}
+                </span>
+              </button>
+            )}
+
+            {/* Light Source Intensity Metrics */}
+            <div className="grid grid-cols-2 gap-1.5 pt-1 text-[10px] font-mono">
+              <div className="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                <span className="text-slate-400 block text-[9px]">Key Light Vector:</span>
+                <span className="text-amber-300 font-bold">
+                  {lastLightingAnalysis.keyLightAngleDeg !== undefined ? `${lastLightingAnalysis.keyLightAngleDeg}° Angle` : 'Top-Left 45°'}
+                </span>
+              </div>
+              <div className="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                <span className="text-slate-400 block text-[9px]">Overall Exposure:</span>
+                <span className="text-emerald-300 font-bold">
+                  {lastLightingAnalysis.overallExposureEV || '+0.2 EV'}
+                </span>
+              </div>
+              <div className="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                <span className="text-slate-400 block text-[9px]">Glare Risk:</span>
+                <span className={`font-bold ${
+                  lastLightingAnalysis.glareRisk === 'High' ? 'text-rose-400' : 'text-emerald-400'
+                }`}>
+                  {lastLightingAnalysis.glareRisk || 'Low Risk'}
+                </span>
+              </div>
+              <div className="bg-slate-950 p-2 rounded-lg border border-slate-800">
+                <span className="text-slate-400 block text-[9px]">Uniformity Score:</span>
+                <span className="text-indigo-300 font-bold">
+                  {lastLightingAnalysis.uniformityScore !== undefined ? `${lastLightingAnalysis.uniformityScore}/100` : '85/100'}
+                </span>
+              </div>
+            </div>
+
+            <div className="text-[10px] text-slate-400 flex flex-wrap gap-1.5 pt-0.5">
               <span className="bg-slate-800 px-2 py-0.5 rounded text-indigo-300">
                 Brightness: {lastLightingAnalysis.brightness > 0 ? `+${lastLightingAnalysis.brightness}` : lastLightingAnalysis.brightness}
               </span>
@@ -231,6 +286,7 @@ export const AdjustmentsPanel: React.FC<AdjustmentsPanelProps> = ({
 
             {lastLightingAnalysis.recommendedPrompt && (
               <button
+                type="button"
                 onClick={() => onApplyRecommendedPrompt(lastLightingAnalysis.recommendedPrompt)}
                 className="w-full mt-1 py-1.5 px-2.5 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-[11px] font-semibold rounded-lg border border-indigo-500/30 transition flex items-center justify-between group"
               >

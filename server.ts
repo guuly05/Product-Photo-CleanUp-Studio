@@ -99,8 +99,8 @@ async function startServer() {
             },
             {
               text: `Analyze this product photo as a commercial studio photography lighting engineer.
-Examine exposure, brightness, contrast, color saturation, grounding shadows, reflections, and backdrop framing.
-Return optimal studio lighting post-processing settings and recommendations for commercial e-commerce.
+Examine exposure, brightness, contrast, color saturation, grounding shadows, specular reflections, and backdrop framing.
+Map out the detected studio light sources (Key Light, Fill Light, Rim/Backlight, Specular Glare Hotspots) with 2D image percentage coordinates (xPct 0-100%, yPct 0-100%).
 
 Return JSON with:
 - brightness: integer from -50 to 50
@@ -109,7 +109,13 @@ Return JSON with:
 - shadow: { enabled: boolean, opacity: integer 0-100, blur: integer 0-50, offsetY: integer 0-40 }
 - suggestedBackdropColor: hex string (e.g., "#FFFFFF", "#F1F5F9", or "#F5F2EB")
 - lightingAssessment: 1-2 sentence professional assessment of current lighting and exposure
-- recommendedPrompt: tailored retouching prompt for this image`,
+- recommendedPrompt: tailored retouching prompt for this image
+- keyLightAngleDeg: integer (0 to 360, e.g. 45 for top-left)
+- overallExposureEV: string (e.g. "+0.2 EV", "-0.5 EV")
+- uniformityScore: integer (0-100 studio score)
+- glareRisk: string ("Low", "Medium", or "High")
+- lightSources: list of detected light source objects { id, name, type ("key"|"fill"|"rim"|"ambient"|"glare"), xPct (0-100), yPct (0-100), intensityPct (0-100), colorTempK (e.g. 5600), description }
+- luminanceHotspots: list of peak highlight/hotspot zones { xPct (0-100), yPct (0-100), radiusPct (5-25), intensity (0-100), label }`,
             },
           ],
         },
@@ -134,6 +140,41 @@ Return JSON with:
               suggestedBackdropColor: { type: "STRING" },
               lightingAssessment: { type: "STRING" },
               recommendedPrompt: { type: "STRING" },
+              keyLightAngleDeg: { type: "INTEGER" },
+              overallExposureEV: { type: "STRING" },
+              uniformityScore: { type: "INTEGER" },
+              glareRisk: { type: "STRING" },
+              lightSources: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    id: { type: "STRING" },
+                    name: { type: "STRING" },
+                    type: { type: "STRING" },
+                    xPct: { type: "INTEGER" },
+                    yPct: { type: "INTEGER" },
+                    intensityPct: { type: "INTEGER" },
+                    colorTempK: { type: "INTEGER" },
+                    description: { type: "STRING" },
+                  },
+                  required: ["id", "name", "type", "xPct", "yPct", "intensityPct", "description"],
+                },
+              },
+              luminanceHotspots: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    xPct: { type: "INTEGER" },
+                    yPct: { type: "INTEGER" },
+                    radiusPct: { type: "INTEGER" },
+                    intensity: { type: "INTEGER" },
+                    label: { type: "STRING" },
+                  },
+                  required: ["xPct", "yPct", "radiusPct", "intensity", "label"],
+                },
+              },
             },
             required: [
               "brightness",
