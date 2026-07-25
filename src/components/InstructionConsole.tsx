@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Sparkles,
   Send,
@@ -17,7 +17,11 @@ import {
   Tag,
   CheckCircle2,
   ChevronRight,
-  ShieldAlert
+  ShieldAlert,
+  History,
+  Clock,
+  ChevronDown,
+  Trash2
 } from 'lucide-react';
 import { PRESET_INSTRUCTIONS } from '../data/presets';
 import { PresetInstruction } from '../types';
@@ -29,6 +33,7 @@ interface InstructionConsoleProps {
   selectedAspectRatio: string;
   onSelectAspectRatio: (ratio: string) => void;
   error?: string | null;
+  recentPrompts?: string[];
 }
 
 export const InstructionConsole: React.FC<InstructionConsoleProps> = ({
@@ -38,10 +43,68 @@ export const InstructionConsole: React.FC<InstructionConsoleProps> = ({
   selectedAspectRatio,
   onSelectAspectRatio,
   error,
+  recentPrompts: externalRecentPrompts,
 }) => {
   const [promptInput, setPromptInput] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<'all' | 'background' | 'cleanup' | 'ecommerce' | 'aesthetic'>('all');
   const [showPromptLibrary, setShowPromptLibrary] = useState<boolean>(false);
+  const [showRecentDropdown, setShowRecentDropdown] = useState<boolean>(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [recentPrompts, setRecentPrompts] = useState<string[]>(() => {
+    if (externalRecentPrompts && externalRecentPrompts.length > 0) return externalRecentPrompts;
+    try {
+      const saved = localStorage.getItem('studio_recent_prompts');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Keep external recent prompts in sync if provided
+  useEffect(() => {
+    if (externalRecentPrompts && externalRecentPrompts.length > 0) {
+      setRecentPrompts(externalRecentPrompts);
+    }
+  }, [externalRecentPrompts]);
+
+  // Click outside listener for recent prompts dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowRecentDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const addRecentPrompt = (prompt: string) => {
+    const trimmed = prompt.trim();
+    if (!trimmed) return;
+    setRecentPrompts((prev) => {
+      const updated = [trimmed, ...prev.filter((p) => p.toLowerCase() !== trimmed.toLowerCase())].slice(0, 5);
+      try {
+        localStorage.setItem('studio_recent_prompts', JSON.stringify(updated));
+      } catch (e) {
+        console.warn('Failed to save recent prompts:', e);
+      }
+      return updated;
+    });
+  };
+
+  const handleSelectRecent = (promptText: string) => {
+    setPromptInput(promptText);
+    setShowRecentDropdown(false);
+  };
+
+  const handleClearRecent = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setRecentPrompts([]);
+    try {
+      localStorage.removeItem('studio_recent_prompts');
+    } catch (e) {}
+  };
 
   // Common retouching phrases library
   const PROMPT_LIBRARY_ITEMS = [
@@ -71,11 +134,13 @@ export const InstructionConsole: React.FC<InstructionConsoleProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!promptInput.trim() || isProcessing) return;
+    addRecentPrompt(promptInput);
     onSubmitPrompt(promptInput, selectedAspectRatio);
   };
 
   const handleSelectPreset = (preset: PresetInstruction) => {
     setPromptInput(preset.prompt);
+    addRecentPrompt(preset.prompt);
     onSubmitPrompt(preset.prompt, selectedAspectRatio);
   };
 
@@ -96,17 +161,79 @@ export const InstructionConsole: React.FC<InstructionConsoleProps> = ({
             <span>Type CleanUp or Background Instruction</span>
           </label>
           
-          {/* File Upload Trigger */}
-          <label className="text-xs text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer flex items-center space-x-1.5 transition">
-            <Upload className="w-3.5 h-3.5" />
-            <span>Upload New Photo</span>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </label>
+          <div className="flex items-center space-x-3">
+            {/* Recent Prompts Dropdown Trigger */}
+            {recentPrompts.length > 0 && (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setShowRecentDropdown(!showRecentDropdown)}
+                  className={`text-xs px-2.5 py-1 rounded-lg border transition flex items-center space-x-1.5 ${
+                    showRecentDropdown
+                      ? 'bg-indigo-600/20 border-indigo-500 text-indigo-300'
+                      : 'bg-slate-950 hover:bg-slate-800 border-slate-800 text-slate-300 hover:text-white'
+                  }`}
+                  title="View last 5 successful prompts"
+                >
+                  <History className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="font-medium hidden sm:inline">Recent Prompts</span>
+                  <span className="bg-indigo-500/20 text-indigo-300 text-[10px] font-mono px-1.5 py-0.2 rounded-full font-bold">
+                    {recentPrompts.length}
+                  </span>
+                  <ChevronDown className={`w-3 h-3 transition-transform ${showRecentDropdown ? 'rotate-180' : ''}`} />
+                </button>
+
+                {/* Dropdown Menu */}
+                {showRecentDropdown && (
+                  <div className="absolute right-0 mt-2 w-72 sm:w-80 bg-slate-950 border border-slate-700/80 rounded-xl shadow-2xl z-50 p-2 text-slate-200 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="flex items-center justify-between px-2 py-1.5 border-b border-slate-800 mb-1">
+                      <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center space-x-1">
+                        <Clock className="w-3 h-3 text-indigo-400" />
+                        <span>Recent Prompts (Last 5)</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={handleClearRecent}
+                        className="text-[10px] text-slate-500 hover:text-rose-400 flex items-center space-x-1 transition"
+                        title="Clear recent prompts history"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        <span>Clear</span>
+                      </button>
+                    </div>
+
+                    <div className="space-y-1 max-h-52 overflow-y-auto custom-scrollbar">
+                      {recentPrompts.map((p, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleSelectRecent(p)}
+                          className="w-full text-left p-2 rounded-lg hover:bg-indigo-950/50 text-xs text-slate-300 hover:text-indigo-200 transition group flex items-start space-x-2 border border-transparent hover:border-indigo-500/30"
+                        >
+                          <span className="text-[10px] font-mono text-slate-500 group-hover:text-indigo-400 pt-0.5 shrink-0">
+                            #{idx + 1}
+                          </span>
+                          <span className="line-clamp-2 leading-tight flex-1 font-sans">{p}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* File Upload Trigger */}
+            <label className="text-xs text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer flex items-center space-x-1.5 transition">
+              <Upload className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Upload New Photo</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+            </label>
+          </div>
         </div>
 
         <form onSubmit={handleSubmit} className="relative">
